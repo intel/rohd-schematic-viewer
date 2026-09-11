@@ -16,11 +16,13 @@ The ROHD Schematic Viewer adopts the [Contributor Covenant](https://www.contribu
 
 Join the Discord server here: <https://discord.com/invite/jubxF84yGw>
 
+<!--
 ### GitHub Discussions
 
 GitHub Discussions is a place where you can find announcements, ask questions, share ideas, show new things you're working on, or just discuss in general with the community! If you have a question or need some help, this is a great place to go.
 
 You can access the discussions area here: <https://github.com/intel/rohd-schematic-viewer/discussions>
+-->
 
 ### GitHub Issues
 

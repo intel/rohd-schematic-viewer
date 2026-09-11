@@ -9,7 +9,7 @@ Use it to navigate a design hierarchy, inspect module ports and internal
 connections, find and highlight nets, and progressively expand the logic
 relevant to an investigation.
 
-**[Open the hosted ROHD Schematic Viewer](https://intel.github.io/rohd-schematic-viewer/)**
+<!-- **[Open the hosted ROHD Schematic Viewer](https://intel.github.io/rohd-schematic-viewer/)** -->
 
 [![Watch the ROHD Schematic Viewer demo](images/filter_bank_schematic.png)](images/schematic-demo.mp4)
 
@@ -28,7 +28,7 @@ Publishing checklist for https://github.com/intel/rohd-schematic-viewer:
    the local fallbacks are no longer wanted.
 -->
 
-## Prepare a Netlist
+## Generate a Netlist Directly with ROHD
 
 ROHD Schematic Viewer requires a netlist in the
 [Yosys JSON netlist format](https://yosyshq.readthedocs.io/projects/yosys/en/latest/cmd/index_backends.html#write-json-write-design-to-a-json-file).
@@ -36,6 +36,7 @@ Plain Yosys JSON is sufficient for schematic exploration. For a ROHD design,
 build the top-level module and pass it to `NetlistService`; ROHD-generated
 netlists can also preserve ROHD types for structured signals:
 
+<!-- THis is a future API change
 ```dart
 final dut = MyModule(...);
 await dut.build();
@@ -47,9 +48,8 @@ final netlist = NetlistService(
 ```
 
 `NetlistService` is the supported API for generating the netlist.
+-->
 
-<!--
-### Generate a Netlist Directly with ROHD
 
 You can generate a netlist from any ROHD top-level module with a small Dart
 program. Replace `MyModule` with the top-level module from your design, and
@@ -84,7 +84,6 @@ dart run tool/generate_netlist.dart
 Then open `build/my_hardware.rohd.json` in the viewer. For source navigation
 metadata in the VS Code extension, use the `NetlistService` example below
 instead.
--->
 
 ## Choose How to Open the Viewer
 
@@ -107,7 +106,7 @@ Viewer.
 
 Use the hosted application without installing an extension:
 
-**[Open ROHD Schematic Viewer](https://intel.github.io/rohd-schematic-viewer/)**
+<!-- **[Open ROHD Schematic Viewer](https://intel.github.io/rohd-schematic-viewer/)** -->
 
 Select a Yosys JSON netlist from your computer. The hosted viewer processes the
 file locally in your browser; it does not upload the netlist to an application
