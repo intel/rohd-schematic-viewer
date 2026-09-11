@@ -8,6 +8,9 @@
       },
       {
         "pattern":"^http://localhost:9199/?$"
+      },
+      {
+        "pattern":"^https://github.com/user-attachments/assets/"
       }
     ]
   }

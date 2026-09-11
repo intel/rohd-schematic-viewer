@@ -11,7 +11,7 @@ relevant to an investigation.
 
 **[Open the hosted ROHD Schematic Viewer](https://intel.github.io/rohd-schematic-viewer/)**
 
-[![Watch the ROHD Schematic Viewer demo](images/filter_bank_schematic.png)]([images/schematic-demo.mp4](https://github.com/user-attachments/assets/2e3e70cc-5a71-4585-baf7-370c9444a002))
+[![Watch the ROHD Schematic Viewer demo](images/filter_bank_schematic.png)](https://github.com/user-attachments/assets/2e3e70cc-5a71-4585-baf7-370c9444a002)
 
 *Click the image to watch the viewer progressively expand a design and reveal
 the connections that matter.*
@@ -122,7 +122,7 @@ picker to open another Yosys JSON netlist. This standalone application does not
 currently provide services beyond schematic exploration.
 
 Instructions for building and running desktop, web, and VS Code extension
-configurations are in [docs/BUILD.md](docs/BUILD.md).
+configurations are in [doc/BUILD.md](doc/BUILD.md).
 
 ## Quick Start
 
@@ -239,7 +239,7 @@ ROHD Schematic Viewer reads the **Yosys JSON netlist format**:
 See the
 [Yosys `write_json` documentation](https://yosyshq.readthedocs.io/projects/yosys/en/latest/cmd/index_backends.html#write-json-write-design-to-a-json-file)
 for the base format and
-[docs/netlist_json_format.md](docs/netlist_json_format.md) for the ROHD-specific
+[doc/netlist_json_format.md](doc/netlist_json_format.md) for the ROHD-specific
 extensions supported by the viewer.
 
 ## Troubleshooting
@@ -277,9 +277,9 @@ File/Line/Column source information.
 
 This README is the user guide. Instructions for selecting dependency modes,
 running Flutter configurations, packaging the VS Code extension, and
-troubleshooting builds are in [docs/BUILD.md](docs/BUILD.md).
+troubleshooting builds are in [doc/BUILD.md](doc/BUILD.md).
 
-- [Developer documentation map](docs/README.md)
+- [Developer documentation map](doc/README.md)
 - [Report an issue](https://github.com/intel/rohd-schematic-viewer/issues)
 - [ROHD](https://github.com/intel/rohd)
 - [Yosys](https://github.com/YosysHQ/yosys)
