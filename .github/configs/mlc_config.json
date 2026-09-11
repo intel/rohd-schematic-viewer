@@ -5,6 +5,9 @@
       },
       {
         "pattern":"^https://stackoverflow.com"
+      },
+      {
+        "pattern":"^http://localhost:9199/?$"
       }
     ]
   }
