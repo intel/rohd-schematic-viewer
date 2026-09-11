@@ -50,7 +50,6 @@ final netlist = NetlistService(
 `NetlistService` is the supported API for generating the netlist.
 -->
 
-
 You can generate a netlist from any ROHD top-level module with a small Dart
 program. Replace `MyModule` with the top-level module from your design, and
 make sure the program is run from a Dart or Flutter package that depends on
