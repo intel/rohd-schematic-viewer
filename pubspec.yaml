@@ -1,0 +1,90 @@
+name: rohd_schematic_viewer
+description: "ROHD Schematic Viewer - Standalone Flutter schematic viewer for Yosys JSON netlists"
+homepage: https://intel.github.io/rohd-website/
+repository: https://github.com/intel/rohd-schematic-viewer
+version: 0.1.0
+issue_tracker: https://github.com/intel/rohd-schematic-viewer/issues
+
+publish_to: none
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+  flutter: '>=3.44.0'
+
+dependencies:
+  file_selector: ^1.0.3
+  flutter:
+    sdk: flutter
+  # State management for tabs
+  flutter_bloc: ^9.0.0
+  # JavaScript runtime for native platforms (Linux)
+  flutter_js: ^0.8.3
+  flutter_web_plugins:
+    sdk: flutter
+  material_ui: ^1.1.0
+  # Application version from pubspec metadata
+  package_info_plus: ^9.0.1
+  # ROHD release baseline; temporarily overridden below until the fix ships.
+  rohd:
+    git:
+      url: https://github.com/intel/rohd.git
+      ref: v0.6.10
+  # Shared widgets (help, overlay, PNG export)
+  rohd_devtools_widgets:
+    git:
+      url: https://github.com/intel/rohd.git
+      ref: v0.6.10
+      path: rohd_devtools_extension/packages/rohd_devtools_widgets
+  # Hierarchy API for hardware module navigation
+  rohd_hierarchy:
+    git:
+      url: https://github.com/intel/rohd.git
+      ref: v0.6.10
+      path: packages/rohd_hierarchy
+  # Source navigator (FLC data model, frame types)
+  rohd_source_navigator:
+    git:
+      url: https://github.com/intel/rohd.git
+      ref: v0.6.10
+      path: rohd_extension/dart
+  web: ^1.0.0
+
+dev_dependencies:
+  flutter_lints: ^3.0.0
+  flutter_test:
+    sdk: flutter
+  test: ^1.24.9
+
+# Temporary branch override until the popup-menu fix is released.
+dependency_overrides:
+  rohd:
+    git:
+      url: https://github.com/desmonddak/rohd.git
+      ref: fix/devtools-popup-menu-material-ui
+  rohd_devtools_widgets:
+    git:
+      url: https://github.com/desmonddak/rohd.git
+      ref: fix/devtools-popup-menu-material-ui
+      path: rohd_devtools_extension/packages/rohd_devtools_widgets
+  rohd_hierarchy:
+    git:
+      url: https://github.com/desmonddak/rohd.git
+      ref: fix/devtools-popup-menu-material-ui
+      path: packages/rohd_hierarchy
+  rohd_source_navigator:
+    git:
+      url: https://github.com/desmonddak/rohd.git
+      ref: fix/devtools-popup-menu-material-ui
+      path: rohd_extension/dart
+
+flutter:
+  uses-material-design: true
+  assets:
+    # ELK layout engine JS files
+    - assets/js/
+    - assets/gate_catalog.rohd.json
+    - assets/rohd_schematic.json
+    # Markdown help content
+    - assets/help/
+    # Third-party license text for bundled JavaScript assets
+    - assets/licenses/

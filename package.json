@@ -1,0 +1,76 @@
+{
+  "name": "rohd-schematic-viewer",
+  "displayName": "ROHD Schematic Viewer",
+  "description": "Visualize Yosys JSON netlist files as interactive schematics",
+  "version": "0.1.0",
+  "publisher": "rohd",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/intel/rohd-schematic-viewer.git"
+  },
+  "icon": "icon.png",
+  "extensionKind": [
+    "workspace"
+  ],
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Visualization"
+  ],
+  "activationEvents": [
+    "onCommand:vscodeSchematicViewer.openSchematic",
+    "onCommand:vscodeSchematicViewer.openDartAsSchematic",
+    "onCustomEditor:vscodeSchematicViewer.yosysJson"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "vscodeSchematicViewer.yosysJson",
+        "displayName": "ROHD Schematic Viewer",
+        "selector": [
+          {
+            "filenamePattern": "*.json"
+          }
+        ],
+        "priority": "option"
+      }
+    ],
+    "commands": [
+      {
+        "command": "vscodeSchematicViewer.openSchematic",
+        "title": "Open as Schematic",
+        "category": "VSCode"
+      },
+      {
+        "command": "vscodeSchematicViewer.openDartAsSchematic",
+        "title": "Open Dart As Schematic (dart -> .json)",
+        "category": "VSCode"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "vscodeSchematicViewer.openSchematic",
+          "when": "resourceExtname == .json",
+          "group": "navigation"
+        },
+        {
+          "command": "vscodeSchematicViewer.openDartAsSchematic",
+          "when": "resourceExtname == .dart",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "ROHD Schematic Viewer",
+      "properties": {}
+    }
+  },
+  "scripts": {
+    "build:extension": "sh ./scripts/build_extension.sh",
+    "install:server": "sh ./scripts/install_extension_server.sh build/vscode-schematic-viewer-*.zip",
+    "clean:builds": "sh ./scripts/clean_builds.sh"
+  }
+}

@@ -1,0 +1,36 @@
+# Ignore build artifacts and temporary files
+build/
+coverage/
+node_modules/
+
+# Flutter/Dart build and cache directories
+.dart_tool/
+.packages
+pubspec.lock
+pubspec_overrides.yaml
+
+# Directory created by dartdoc
+doc/api
+
+# Flutter platform-specific build outputs
+linux/flutter/ephemeral/
+linux/shared/
+linux/flutter/generated_plugin_registrant.cc
+linux/flutter/generated_plugin_registrant.h
+linux/flutter/generated_plugins.cmake
+
+# Generated and ephemeral files
+.flutter-plugins
+.flutter-plugins-dependencies
+.fvm/
+
+# IDEs
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.iml
+*.ipr
+*.iws
+

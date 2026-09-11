@@ -1,0 +1,79 @@
+name: General
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  run-checks:
+    name: Run Checks
+    permissions: {}
+    timeout-minutes: 60
+    runs-on: ${{ github.repository_owner == 'intel' && 'intel-ubuntu-latest' || 'ubuntu-latest' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Lint Markdown files
+        uses: DavidAnson/markdownlint-cli2-action@v11
+        with:
+          globs: '**/*.md'
+
+      - name: Check Markdown links
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: yes
+          config-file: .github/configs/mlc_config.json
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.2'
+          cache: true
+
+      - name: Verify Flutter on PATH
+        run: bash scripts/verify_flutter_version.sh
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Install project dependencies
+        run: tool/gh_actions/install_dependencies.sh
+
+      - name: Verify project formatting
+        run: tool/gh_actions/verify_formatting.sh
+
+      - name: Analyze project source
+        run: tool/gh_actions/analyze_source.sh
+
+      - name: Check project documentation
+        run: tool/gh_actions/generate_documentation.sh
+
+      - name: Run project tests
+        run: make test
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+
+      - name: Build Linux application
+        run: make linux-release
+
+      - name: Build web application
+        run: make web
+
+      - name: Build extension package
+        run: make extension
+
+      - name: Verify ELK distribution
+        run: make verify-elk-distribution

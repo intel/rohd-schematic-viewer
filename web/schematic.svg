@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Wires (orthogonal lines) -->
+  <polyline points="10,6 17,6 17,16" fill="none" stroke="#888" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+  <polyline points="10,24 17,24 17,16" fill="none" stroke="#888" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+  <line x1="17" y1="16" x2="21" y2="16" stroke="#888" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- Junction dot -->
+  <circle cx="17" cy="16" r="1.5" fill="#888"/>
+  <!-- Block A (blue, upper-left) -->
+  <rect x="1" y="2" width="9" height="7" rx="1.2" fill="#4A90D9"/>
+  <!-- Block B (green, lower-left) -->
+  <rect x="1" y="20" width="9" height="7" rx="1.2" fill="#50B86C"/>
+  <!-- Block C (orange, middle-right) -->
+  <rect x="21" y="12" width="9" height="7" rx="1.2" fill="#E8943A"/>
+</svg>
