@@ -9,7 +9,7 @@ Use it to navigate a design hierarchy, inspect module ports and internal
 connections, find and highlight nets, and progressively expand the logic
 relevant to an investigation.
 
-**[Open the hosted ROHD Schematic Viewer](https://intel.github.io/rohd-schematic-viewer/)** 
+**[Open the hosted ROHD Schematic Viewer](https://intel.github.io/rohd-schematic-viewer/)**
 
 [![Watch the ROHD Schematic Viewer demo](images/filter_bank_schematic.png)]([images/schematic-demo.mp4](https://github.com/user-attachments/assets/2e3e70cc-5a71-4585-baf7-370c9444a002))
 
@@ -107,7 +107,7 @@ Viewer.
 
 Use the hosted application without installing an extension:
 
-**[Open ROHD Schematic Viewer](https://intel.github.io/rohd-schematic-viewer/)** 
+**[Open ROHD Schematic Viewer](https://intel.github.io/rohd-schematic-viewer/)**
 
 Select a Yosys JSON netlist from your computer. The hosted viewer processes the
 file locally in your browser; it does not upload the netlist to an application
