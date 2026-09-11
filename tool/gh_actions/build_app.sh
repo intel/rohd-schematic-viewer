@@ -43,7 +43,7 @@ cd "$repo_root"
 
 bash scripts/verify_flutter_version.sh
 make web-release \
-  FLUTTER_WEB_BUILD_ARGS="--base-href=$base_href"
+  FLUTTER_WEB_BUILD_ARGS="--base-href=$base_href --pwa-strategy=none"
 
 # Flutter's PWA build option is deprecated. Enforce the no-service-worker
 # artifact policy explicitly instead.
