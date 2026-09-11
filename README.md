@@ -9,9 +9,9 @@ Use it to navigate a design hierarchy, inspect module ports and internal
 connections, find and highlight nets, and progressively expand the logic
 relevant to an investigation.
 
-<!-- **[Open the hosted ROHD Schematic Viewer](https://intel.github.io/rohd-schematic-viewer/)** -->
+**[Open the hosted ROHD Schematic Viewer](https://intel.github.io/rohd-schematic-viewer/)** 
 
-[![Watch the ROHD Schematic Viewer demo](images/filter_bank_schematic.png)](images/schematic-demo.mp4)
+[![Watch the ROHD Schematic Viewer demo](images/filter_bank_schematic.png)]([images/schematic-demo.mp4](https://github.com/user-attachments/assets/2e3e70cc-5a71-4585-baf7-370c9444a002))
 
 *Click the image to watch the viewer progressively expand a design and reveal
 the connections that matter.*
@@ -26,6 +26,8 @@ Publishing checklist for https://github.com/intel/rohd-schematic-viewer:
    renders the inline video player.
 3. Verify playback from the rendered README, then delete the committed MP4s if
    the local fallbacks are no longer wanted.
+
+   Inline advice:  place in an issue and use that link.
 -->
 
 ## Generate a Netlist Directly with ROHD
@@ -36,7 +38,7 @@ Plain Yosys JSON is sufficient for schematic exploration. For a ROHD design,
 build the top-level module and pass it to `NetlistService`; ROHD-generated
 netlists can also preserve ROHD types for structured signals:
 
-<!-- THis is a future API change
+<!-- This is a future API change
 ```dart
 final dut = MyModule(...);
 await dut.build();
@@ -105,7 +107,7 @@ Viewer.
 
 Use the hosted application without installing an extension:
 
-<!-- **[Open ROHD Schematic Viewer](https://intel.github.io/rohd-schematic-viewer/)** -->
+**[Open ROHD Schematic Viewer](https://intel.github.io/rohd-schematic-viewer/)** 
 
 Select a Yosys JSON netlist from your computer. The hosted viewer processes the
 file locally in your browser; it does not upload the netlist to an application
