@@ -1,5 +1,12 @@
 # ROHD Schematic Viewer
 
+[![Tests](https://github.com/intel/rohd-schematic-viewer/actions/workflows/general.yml/badge.svg?event=push)](https://github.com/intel/rohd-schematic-viewer/actions/workflows/general.yml)
+[![API Docs](https://img.shields.io/badge/API%20Docs-generated-success)](https://intel.github.io/rohd-schematic-viewer/api/)
+[![Chat](https://img.shields.io/discord/1001179329411166267?label=Chat)](https://discord.gg/jubxF84yGw)
+[![License](https://img.shields.io/badge/License-BSD--3-blue)](https://github.com/intel/rohd-schematic-viewer/blob/main/LICENSE)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](https://github.com/intel/rohd-schematic-viewer/blob/main/CODE_OF_CONDUCT.md)
+[![Coverage](https://raw.githubusercontent.com/intel/rohd-schematic-viewer/refs/heads/badges/coverage/main.svg)](https://github.com/intel/rohd-schematic-viewer/blob/main/.github/workflows/coverage.yml)
+
 ROHD Schematic Viewer is an interactive viewer for netlists produced by the
 **ROHD netlister** using  a superset of the **Yosys JSON** netlist format (which
 are also supported). It is designed for exploring ROHD-generated designs in

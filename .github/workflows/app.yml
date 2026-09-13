@@ -36,6 +36,9 @@ jobs:
       - name: Build standalone application
         run: tool/gh_actions/build_app.sh
 
+      - name: Generate API documentation
+        run: dart doc --output=build/web/api
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

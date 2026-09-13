@@ -18,6 +18,20 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COVERAGE_DIR="$ROOT_DIR/coverage"
 LCOV_FILE="$COVERAGE_DIR/lcov.info"
 HTML_DIR="$COVERAGE_DIR/html"
+GENERATE_SVG=false
+
+while (($# > 0)); do
+  case "$1" in
+    --generate-svg)
+      GENERATE_SVG=true
+      ;;
+    *)
+      printf 'error: unknown option: %s\n' "$1" >&2
+      exit 2
+      ;;
+  esac
+  shift
+done
 
 bash "$ROOT_DIR/scripts/verify_flutter_version.sh"
 
@@ -69,5 +83,72 @@ genhtml \
   "$LCOV_FILE"
 
 printf '\n'
-lcov --summary "$LCOV_FILE"
+coverage_summary="$(lcov --summary "$LCOV_FILE" 2>&1)"
+printf '%s\n' "$coverage_summary"
 printf '\nHTML report: %s\n' "$HTML_DIR/index.html"
+
+if [[ "$GENERATE_SVG" == true ]]; then
+  coverage_percent="$(
+    printf '%s\n' "$coverage_summary" |
+      awk '
+        /lines[.]*:/ {
+          if (match($0, /[0-9]+([.][0-9]+)?%/)) {
+            value = substr($0, RSTART, RLENGTH)
+            sub(/%$/, "", value)
+            print value
+            exit
+          }
+        }
+      '
+  )"
+  if [[ -z "$coverage_percent" ]]; then
+    printf 'error: could not extract line coverage percentage\n' >&2
+    exit 1
+  fi
+
+  coverage_color="$(
+    awk -v percentage="$coverage_percent" 'BEGIN {
+      if (percentage >= 90) {
+        print "#4c1"
+      } else if (percentage >= 80) {
+        print "#97ca00"
+      } else if (percentage >= 70) {
+        print "#dfb317"
+      } else if (percentage >= 60) {
+        print "#fe7d37"
+      } else {
+        print "#e05d44"
+      }
+    }'
+  )"
+  badge_text="${coverage_percent}%"
+  text_width=$((${#badge_text} * 63))
+  label_width=63
+  value_width=$((text_width / 10 + 10))
+  total_width=$((label_width + value_width))
+
+  cat > /tmp/coverage-badge.svg << EOF
+<svg xmlns="http://www.w3.org/2000/svg" width="${total_width}" height="20" role="img" aria-label="coverage: ${badge_text}">
+    <title>coverage: ${badge_text}</title>
+    <linearGradient id="s" x2="0" y2="100%">
+        <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+        <stop offset="1" stop-opacity=".1"/>
+    </linearGradient>
+    <clipPath id="r">
+        <rect width="${total_width}" height="20" rx="3" fill="#fff"/>
+    </clipPath>
+    <g clip-path="url(#r)">
+        <rect width="${label_width}" height="20" fill="#555"/>
+        <rect x="${label_width}" width="${value_width}" height="20" fill="${coverage_color}"/>
+        <rect width="${total_width}" height="20" fill="url(#s)"/>
+    </g>
+    <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="110">
+        <text aria-hidden="true" x="325" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="530">coverage</text>
+        <text x="325" y="140" transform="scale(.1)" fill="#fff" textLength="530">coverage</text>
+        <text aria-hidden="true" x="$((label_width * 10 + value_width * 5))" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="${text_width}">${badge_text}</text>
+        <text x="$((label_width * 10 + value_width * 5))" y="140" transform="scale(.1)" fill="#fff" textLength="${text_width}">${badge_text}</text>
+    </g>
+</svg>
+EOF
+  printf 'Generated SVG badge at /tmp/coverage-badge.svg\n'
+fi

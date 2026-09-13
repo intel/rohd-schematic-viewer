@@ -11,6 +11,12 @@
       },
       {
         "pattern":"^https://github.com/user-attachments/assets/"
+      },
+      {
+        "pattern":"^https://raw.githubusercontent.com/intel/rohd-schematic-viewer/refs/heads/badges/coverage/main.svg$"
+      },
+      {
+        "pattern":"^https://intel.github.io/rohd-schematic-viewer/api/?$"
       }
     ]
   }
