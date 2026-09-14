@@ -185,10 +185,42 @@ class _FlutterSchematicViewerPageState
 
   @override
   AvailableSourceFormats? get availableSourceFormats {
-    if (_extensionClient == null) {
+    if (_extensionClient == null &&
+        (schematicAdapter?.embeddedFlcData.isEmpty ?? true)) {
       return null;
     }
-    return () => resolveNavigableFormats(_moduleInfo);
+    return () {
+      final extensionFormats = resolveNavigableFormats(_moduleInfo);
+      if (extensionFormats.isNotEmpty) {
+        return extensionFormats;
+      }
+      return _embeddedSourceFormats();
+    };
+  }
+
+  List<RohdSourceFormat> _embeddedSourceFormats() {
+    final data = schematicAdapter?.embeddedFlcData;
+    if (data == null || data.isEmpty) {
+      return const [];
+    }
+    final moduleName = _topModuleName(schematicAdapter!);
+    final formats = <String>{};
+    for (final signalName in data.signalNamesFor(moduleName)) {
+      for (final frame
+          in data.lookupSignal(moduleName, signalName) ?? const <FlcFrame>[]) {
+        formats.add(frame.type);
+      }
+    }
+    for (final instanceName in data.instanceNamesFor(moduleName)) {
+      for (final frame in data.lookupInstance(moduleName, instanceName) ??
+          const <FlcFrame>[]) {
+        formats.add(frame.type);
+      }
+    }
+    return [
+      if (formats.contains('rohd')) RohdSourceFormat.rohd,
+      if (formats.contains('sv')) RohdSourceFormat.sv,
+    ];
   }
 
   @override

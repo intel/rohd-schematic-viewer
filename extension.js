@@ -472,7 +472,7 @@ class SchematicEditorProvider {
     indexHtml = indexHtml.replace('</head>', injectScript + '\n</head>');
     
     // Update CSP for Flutter web
-    const csp = `default-src 'none'; connect-src ${webview.cspSource} https: blob:; style-src ${webview.cspSource} 'unsafe-inline' https:; script-src ${webview.cspSource} 'unsafe-inline' 'unsafe-eval' https: blob:; img-src ${webview.cspSource} https: data: blob:; font-src ${webview.cspSource} https: data:; worker-src ${webview.cspSource} blob:;`;
+    const csp = `default-src 'none'; connect-src ${webview.cspSource} https: blob:; style-src ${webview.cspSource} 'unsafe-inline' https:; script-src ${webview.cspSource} 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https: blob:; img-src ${webview.cspSource} https: data: blob:; font-src ${webview.cspSource} https: data:; worker-src ${webview.cspSource} blob:;`;
     indexHtml = indexHtml.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/i, '');
     indexHtml = indexHtml.replace('<head>', `<head>\n<meta http-equiv="Content-Security-Policy" content="${csp}">`);
     
