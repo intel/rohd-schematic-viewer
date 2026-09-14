@@ -151,9 +151,13 @@ validate-linux-assets: assets/elk_layout_only.js scripts/stage_linux_assets.sh
 
 FLUTTER_WEB_MODE ?= release
 FLUTTER_WEB_BUILD_ARGS ?=
-FLUTTER_WEB_WASM_ARGS := $(if $(filter release,$(FLUTTER_WEB_MODE)),--wasm,)
+# VS Code webviews currently use the JavaScript Flutter bootstrap path. WASM
+# can be enabled explicitly for standalone browser builds with
+# `FLUTTER_WEB_WASM=1`.
+FLUTTER_WEB_WASM ?= 0
+FLUTTER_WEB_WASM_ARGS := $(if $(filter 1 true yes,$(FLUTTER_WEB_WASM)),--wasm,)
 
-build/web/index.html: assets/elk_layout_only.js pubspec.yaml $(DART_SOURCES) \
+build/web/index.html: web/index.html assets/elk_layout_only.js pubspec.yaml $(DART_SOURCES) \
 	scripts/verify_flutter_native_dependencies.sh security/native-dependency-exceptions.json
 	@echo "Building Flutter web app ($(FLUTTER_WEB_MODE))..."
 	@$(FLUTTER) pub get && $(FLUTTER) build web --$(FLUTTER_WEB_MODE) $(FLUTTER_WEB_WASM_ARGS) $(FLUTTER_WEB_BUILD_ARGS)
