@@ -59,7 +59,7 @@ void main() {
     expect(OperatorShapes.getAdditionalTextForOperator('UNKNOWN'), isNull);
   });
 
-  test('flip-flop variants expose matching sizes and labels', () {
+  test('flip-flop variants expose matching sizes without port labels', () {
     const cases = <String, Size>{
       'FF_clk0': OperatorShapes.ffNodeSize,
       'FF_EN_clk1_en0': OperatorShapes.ffSingleCtrlNodeSize,
@@ -77,23 +77,20 @@ void main() {
     }
 
     expect(
-      OperatorShapes.getAdditionalTextForOperator('FF_EN_clk1_en0')!
-          .map((label) => label.$1),
-      ['en'],
+      OperatorShapes.getAdditionalTextForOperator('FF_EN_clk1_en0'),
+      isNull,
     );
     expect(
       OperatorShapes.getAdditionalTextForOperator(
         'FF_SRST_EN_clk0_rst1_en0',
-      )!
-          .map((label) => label.$1),
-      ['SRST', 'en'],
+      ),
+      isNull,
     );
     expect(
       OperatorShapes.getAdditionalTextForOperator(
         'FF_ARST_EN_clk1_rst0_en1',
-      )!
-          .map((label) => label.$1),
-      ['ARST', 'en'],
+      ),
+      isNull,
     );
     expect(
       OperatorShapes.getAdditionalTextForOperator('DLATCH_en0')!
