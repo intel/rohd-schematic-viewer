@@ -604,28 +604,16 @@ class OperatorShapes {
     return offsetMap[operatorName];
   }
 
-  /// Get additional text labels for complex operators (like ARST, en)
-  /// Returns a list of (text, offset, fontSize) tuples
+  /// Get additional text labels for operators that need visible annotations.
+  ///
+  /// Flip-flop control pins intentionally do not have labels: their pin
+  /// positions and the symbol shape identify the controls without adding
+  /// text such as "SRST" or "ARST" to the device body.
+  /// Returns a list of (text, offset, fontSize) tuples.
   static List<(String, Offset, double)>? getAdditionalTextForOperator(
     String operatorName,
   ) {
-    if (operatorName.startsWith('FF_ARST_EN_')) {
-      return [
-        ('ARST', const Offset(4, 32.5), 8.0),
-        ('en', const Offset(4, 50), 8.0),
-      ];
-    } else if (operatorName.startsWith('FF_SRST_EN_')) {
-      return [
-        ('SRST', const Offset(4, 32.5), 8.0),
-        ('en', const Offset(4, 50), 8.0),
-      ];
-    } else if (operatorName.startsWith('FF_ARST_')) {
-      return [('ARST', const Offset(4, 27.5), 8.0)];
-    } else if (operatorName.startsWith('FF_SRST_')) {
-      return [('SRST', const Offset(4, 27.5), 8.0)];
-    } else if (operatorName.startsWith('FF_EN_')) {
-      return [('en', const Offset(4, 27.5), 8.0)];
-    } else if (operatorName.startsWith('DLATCH_')) {
+    if (operatorName.startsWith('DLATCH_')) {
       return [('en', const Offset(4, 19), 8.0)];
     }
     return null;

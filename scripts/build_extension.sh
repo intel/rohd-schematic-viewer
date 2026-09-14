@@ -77,6 +77,7 @@ else
 fi
 
 echo "Creating slim package $OUT"
+rm -f "$OUT"
 cd "$EXT_STAGE"
 zip -r "$OUT" .
 echo "Packaged slim extension to $OUT"

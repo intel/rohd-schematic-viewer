@@ -151,12 +151,21 @@ validate-linux-assets: assets/elk_layout_only.js scripts/stage_linux_assets.sh
 
 FLUTTER_WEB_MODE ?= release
 FLUTTER_WEB_BUILD_ARGS ?=
-FLUTTER_WEB_WASM_ARGS := $(if $(filter release,$(FLUTTER_WEB_MODE)),--wasm,)
+# Release web artifacts use Flutter's WASM entrypoint. The generated
+# flutter_bootstrap.js selects the WASM files when they are present, while
+# debug builds remain JavaScript-based unless explicitly overridden.
+FLUTTER_WEB_WASM ?= $(if $(filter release,$(FLUTTER_WEB_MODE)),1,0)
+FLUTTER_WEB_WASM_ARGS := $(if $(filter 1 true yes,$(FLUTTER_WEB_WASM)),--wasm,)
 
-build/web/index.html: assets/elk_layout_only.js pubspec.yaml $(DART_SOURCES) \
-	scripts/verify_flutter_native_dependencies.sh security/native-dependency-exceptions.json
+build/web/index.html: web/index.html assets/elk_layout_only.js pubspec.yaml $(DART_SOURCES) \
+	scripts/fix_bootstrap.py scripts/verify_flutter_native_dependencies.sh \
+	security/native-dependency-exceptions.json
 	@echo "Building Flutter web app ($(FLUTTER_WEB_MODE))..."
+	# Remove stale JS-only or dual-build output before generating the WASM build.
+	@rm -rf build/web
 	@$(FLUTTER) pub get && $(FLUTTER) build web --$(FLUTTER_WEB_MODE) $(FLUTTER_WEB_WASM_ARGS) $(FLUTTER_WEB_BUILD_ARGS)
+	@echo "Patching flutter_bootstrap.js for webview compatibility..."
+	@python3 "$(ROOT)/scripts/fix_bootstrap.py"
 	@echo "Staging JS scripts for web root (index.html <script> tags)..."
 	@mkdir -p build/web/assets/js
 	@cp assets/elk_layout_only.js build/web/assets/
