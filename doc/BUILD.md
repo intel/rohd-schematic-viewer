@@ -35,7 +35,7 @@ The repository builds from the `fix/devtools-popup-menu-material-ui` branch of
 `https://github.com/desmonddak/rohd.git` by default. Local ROHD checkouts are
 opt-in.
 
-VS Code tasks and `scripts/schematic_run.sh` use these dependency modes:
+The command-line script still supports these convenience modes:
 
 | Mode | Meaning |
 | --- | --- |
@@ -71,19 +71,17 @@ bash scripts/schematic_dev_mode.sh show
 
 ## VS Code Tasks
 
-The checked-in tasks cover dependency switching and common run modes:
+Use the central source selection in each task:
 
-- `Use Manifest Dependencies`
-- `Use Local ROHD Dependencies`
-- `Use Local ROHD Extension Dependencies`
-- `Use All Local ROHD Dependencies`
-- `ROHD Schematic Viewer: Web Debug (choose dependency mode)`
-- `ROHD Schematic Viewer: Web Release (choose dependency mode)`
-- `ROHD Schematic Viewer: Linux Debug (choose dependency mode)`
-- `ROHD Schematic Viewer: Linux Release (choose dependency mode)`
-- `Show Schematic Viewer Dependency Mode`
+- `Configure ROHD Dependency`
+- `Configure Package Dependency`
+- `Configure Widget Dependency`
+- `Configure All Dependencies`
 
-The run tasks default to hosted dependencies and display expanded mode names in the picker.
+After the source selection, one blank value prompt is shown. Leave it blank
+for Hosted, to use `main` for Git, or to use `~/release/rohd` for Local.
+Enter a branch/tag or checkout path to override the corresponding default.
+The run tasks use the resulting configuration.
 
 ## Make Targets
 

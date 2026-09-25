@@ -9,6 +9,7 @@ node_modules/
 pubspec.lock
 pubspec_overrides.yaml
 pubspec_overrides.yaml.disabled*
+.schematic_dependency_sources
 
 # Directory created by dartdoc
 doc/api
