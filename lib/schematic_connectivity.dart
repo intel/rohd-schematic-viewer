@@ -7,89 +7,220 @@
 // 2026 August
 // Author: Desmond Kirkpatrick <desmond.a.kirkpatrick@intel.com>
 
-/// Public schematic connectivity data API for read-only tooling.
+/// Public schematic connectivity API for read-only tooling.
 library;
 
 import 'package:rohd_hierarchy/rohd_hierarchy.dart';
+import 'package:rohd_schematic_viewer/src/schematic/netlist_schematic_adapter.dart';
 import 'package:rohd_schematic_viewer/src/schematic/schematic_data.dart';
-import 'package:rohd_schematic_viewer/src/schematic/schematic_graph.dart';
+import 'package:rohd_schematic_viewer/src/schematic/transparent_traversal.dart';
 
-export 'src/schematic/netlist_schematic_adapter.dart';
-export 'src/schematic/schematic_data.dart'
-    show ElkPort, LayoutHyperedge, LayoutNode;
-export 'src/schematic/schematic_graph.dart' show SchematicGraph;
+export 'package:rohd_hierarchy/rohd_hierarchy.dart'
+    show
+        HierarchyOccurrence,
+        HierarchyService,
+        OccurrenceAddress,
+        SignalOccurrence;
 
 /// How far schematic connectivity traversal should pass through hierarchy.
 enum SchematicTraversalMode {
   /// Return only endpoints directly connected by the queried signal.
   opaque,
 
-  /// Traverse using the current adapter's available connectivity data.
+  /// Traverse through transparent primitive gates.
   transparent,
 }
 
-/// A concrete schematic node/port endpoint reached during traversal.
+/// An immutable schematic endpoint reached during connectivity traversal.
 class SchematicPortOccurrence {
-  /// Creates a schematic port endpoint.
-  const SchematicPortOccurrence({required this.node, required this.port});
+  /// Creates a stable schematic endpoint description.
+  const SchematicPortOccurrence({
+    required this.nodePath,
+    required this.portId,
+    required this.direction,
+    this.nodeAddress,
+  });
 
-  /// Node that owns [port].
-  final LayoutNode node;
+  /// Canonical hierarchy path of the node that owns the port.
+  final String nodePath;
 
-  /// Port reached on [node].
-  final ElkPort port;
+  /// Stable hierarchy address of the node, when one is assigned.
+  final OccurrenceAddress? nodeAddress;
+
+  /// Port identifier within the owning node.
+  final String portId;
+
+  /// Port direction declared by the netlist.
+  final String direction;
 }
 
-/// Connectivity traversal helpers for hierarchy signal handles.
-extension SignalOccurrenceSchematicTraversal on SignalOccurrence {
-  /// Returns schematic endpoints that drive this signal.
-  List<SchematicPortOccurrence> fanin(
-    SchematicGraph schematic, {
-    SchematicTraversalMode mode = SchematicTraversalMode.opaque,
-  }) =>
-      _endpointsFor(schematic, includeSources: true);
+/// Read-only connectivity extracted from a Yosys-compatible netlist.
+///
+/// This facade intentionally hides the mutable layout graph and adapter used
+/// by the interactive viewer.
+class NetlistSchematicConnectivity {
+  NetlistSchematicConnectivity._(this._adapter);
 
-  /// Returns schematic endpoints that consume this signal.
-  List<SchematicPortOccurrence> fanout(
-    SchematicGraph schematic, {
+  final NetlistSchematicAdapter _adapter;
+
+  /// Parses [netlistJson] into a read-only connectivity model.
+  factory NetlistSchematicConnectivity.fromJson(
+    String netlistJson, {
+    HierarchyService? externalHierarchy,
+  }) =>
+      NetlistSchematicConnectivity._(
+        NetlistSchematicAdapter.fromJson(
+          netlistJson,
+          externalHierarchy: externalHierarchy,
+        ),
+      );
+
+  /// Hierarchy used to resolve signal paths and addresses.
+  HierarchyService get hierarchy => _adapter.hierarchy;
+
+  /// Returns schematic endpoints that drive [signal].
+  List<SchematicPortOccurrence> fanin(
+    SignalOccurrence signal, {
     SchematicTraversalMode mode = SchematicTraversalMode.opaque,
   }) =>
-      _endpointsFor(schematic, includeSources: false);
+      _endpointsFor(signal, includeSources: true, mode: mode);
+
+  /// Returns schematic endpoints that consume [signal].
+  List<SchematicPortOccurrence> fanout(
+    SignalOccurrence signal, {
+    SchematicTraversalMode mode = SchematicTraversalMode.opaque,
+  }) =>
+      _endpointsFor(signal, includeSources: false, mode: mode);
 
   List<SchematicPortOccurrence> _endpointsFor(
-    SchematicGraph schematic, {
+    SignalOccurrence signal, {
     required bool includeSources,
+    required SchematicTraversalMode mode,
   }) {
-    final endpoints = <SchematicPortOccurrence>[];
+    final schematic = _adapter.schematic;
+    final initialEndpoints = <(String, int)>[];
     for (final hyperedge in schematic.hyperedges) {
-      if (!_matchesSignal(hyperedge.signal)) {
+      if (!_matchesSignal(signal, hyperedge.signal) ||
+          !_matchesScope(signal, hyperedge, schematic.nodeMap)) {
         continue;
       }
       final pairs = includeSources ? hyperedge.sources : hyperedge.targets;
-      for (final (nodeId, portIndex) in pairs) {
-        final node = schematic.nodeMap[nodeId];
-        if (node == null ||
-            portIndex < 0 ||
-            portIndex >= node.elkPorts.length) {
-          continue;
-        }
-        endpoints.add(
-          SchematicPortOccurrence(node: node, port: node.elkPorts[portIndex]),
-        );
-      }
+      initialEndpoints.addAll(pairs);
     }
-    return endpoints;
+    if (mode == SchematicTraversalMode.transparent) {
+      return _transparentEndpoints(
+        initialEndpoints,
+        traceUpstream: includeSources,
+      );
+    }
+    return _describeEndpoints(initialEndpoints);
   }
 
-  bool _matchesSignal(SignalOccurrence other) {
-    if (identical(this, other)) {
+  List<SchematicPortOccurrence> _transparentEndpoints(
+    List<(String, int)> initialEndpoints, {
+    required bool traceUpstream,
+  }) {
+    final schematic = _adapter.schematic;
+    final queue = [...initialEndpoints];
+    final visited = <(String, int)>{};
+    final terminalEndpoints = <(String, int)>[];
+
+    while (queue.isNotEmpty) {
+      final endpoint = queue.removeAt(0);
+      if (!visited.add(endpoint)) {
+        continue;
+      }
+      final node = schematic.nodeMap[endpoint.$1];
+      if (node == null ||
+          endpoint.$2 < 0 ||
+          endpoint.$2 >= node.elkPorts.length) {
+        continue;
+      }
+      if (!isTransparentTraversalNode(node)) {
+        terminalEndpoints.add(endpoint);
+        continue;
+      }
+
+      for (final exitPort in transparentTraversalExitPorts(node, endpoint.$2)) {
+        final exitEndpoint = (node.id, exitPort);
+        for (final hyperedge in schematic.hyperedges) {
+          final exits = traceUpstream ? hyperedge.targets : hyperedge.sources;
+          if (!exits.contains(exitEndpoint)) {
+            continue;
+          }
+          queue.addAll(
+            traceUpstream ? hyperedge.sources : hyperedge.targets,
+          );
+        }
+      }
+    }
+    return _describeEndpoints(terminalEndpoints);
+  }
+
+  List<SchematicPortOccurrence> _describeEndpoints(
+    List<(String, int)> endpoints,
+  ) =>
+      [
+        for (final (nodeId, portIndex) in endpoints)
+          if (_adapter.schematic.nodeMap[nodeId] case final node?
+              when portIndex >= 0 && portIndex < node.elkPorts.length)
+            _endpoint(node, node.elkPorts[portIndex]),
+      ];
+
+  static SchematicPortOccurrence _endpoint(LayoutNode node, ElkPort port) =>
+      SchematicPortOccurrence(
+        nodePath: node.occurrence.path(),
+        nodeAddress: node.occurrence.address,
+        portId: port.id,
+        direction: port.direction,
+      );
+
+  static bool _matchesSignal(
+    SignalOccurrence signal,
+    SignalOccurrence other,
+  ) {
+    if (identical(signal, other)) {
       return true;
     }
-    final thisAddress = address;
+    final signalAddress = signal.address;
     final otherAddress = other.address;
-    if (thisAddress != null && otherAddress != null) {
-      return thisAddress == otherAddress;
+    if (signalAddress != null && otherAddress != null) {
+      return signalAddress == otherAddress;
     }
-    return path() == other.path();
+    final otherPath = other.path();
+    return signal.path() == otherPath ||
+        (otherAddress == null &&
+            otherPath == other.name &&
+            signal.name == other.name);
+  }
+
+  static bool _matchesScope(
+    SignalOccurrence signal,
+    LayoutHyperedge hyperedge,
+    Map<String, LayoutNode> nodeMap,
+  ) {
+    if (hyperedge.signal.address != null ||
+        hyperedge.signal.path() != hyperedge.signal.name) {
+      return true;
+    }
+    if (signal.name != hyperedge.signal.name) {
+      return false;
+    }
+
+    final scopePath = signal.parent?.path();
+    if (scopePath == null) {
+      return true;
+    }
+    for (final (nodeId, _) in [...hyperedge.sources, ...hyperedge.targets]) {
+      final occurrence = nodeMap[nodeId]?.occurrence;
+      if (occurrence == null) {
+        continue;
+      }
+      if (occurrence.path() == scopePath ||
+          occurrence.parent?.path() == scopePath) {
+        return true;
+      }
+    }
+    return false;
   }
 }

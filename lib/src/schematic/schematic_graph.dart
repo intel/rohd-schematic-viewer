@@ -16,6 +16,7 @@ import 'package:rohd_hierarchy/rohd_hierarchy.dart';
 
 import 'package:rohd_schematic_viewer/src/schematic/operator_shapes.dart';
 import 'package:rohd_schematic_viewer/src/schematic/schematic_data.dart';
+import 'package:rohd_schematic_viewer/src/schematic/transparent_traversal.dart';
 
 /// Snapshot of the full expansion state of a schematic graph.
 ///
@@ -533,22 +534,6 @@ class SchematicGraph {
     return true;
   }
 
-  /// Operator names considered "trivial" for pass-through traversal.
-  ///
-  /// These gates simply relay, invert, or reshape a signal and carry
-  /// little standalone semantic meaning.  When the user asks for
-  /// pass-through expansion the traversal continues *through* any
-  /// hidden child whose `hwMeta.name` is in this set and whose
-  /// `hwMeta.cls == 'Operator'`.
-  static const _trivialOperators = <String>{
-    'BUF',
-    'NOT',
-    'SLICE',
-    'CONCAT',
-    'STRUCT_PACK',
-    'STRUCT_UNPACK',
-  };
-
   /// Find hyperedges in `parentNode` that reference (childNodeId, portIndex).
   ///
   /// Used when the BFS queue contains a child port that isn't in the parent
@@ -592,10 +577,7 @@ class SchematicGraph {
   /// A trivial gate is a leaf-level operator (no sub-children) whose
   /// operator name is in `_trivialOperators`.
   static bool _isTrivialGate(LayoutNode child) =>
-      child.hwMeta.cls == 'Operator' &&
-      _trivialOperators.contains(child.hwMeta.name) &&
-      child.children.isEmpty &&
-      (child.hiddenChildren == null || child.hiddenChildren!.isEmpty);
+      isTransparentTraversalNode(child);
 
   /// Collect the child IDs and hyperedge IDs that would be revealed/removed
   /// by a pass-through expansion/collapse on `portId` in `node`.
@@ -742,33 +724,8 @@ class SchematicGraph {
   /// and vice-versa.  For INOUT ports, returns all other port indices.
   /// This is used by `expandPortThrough` to continue traversal through
   /// trivial gates.
-  static List<int> _exitPortIndices(LayoutNode child, int entryPortIndex) {
-    if (entryPortIndex < 0 || entryPortIndex >= child.elkPorts.length) {
-      return const [];
-    }
-    final entryDirection = child.elkPorts[entryPortIndex].direction;
-
-    // For inout ports, return all *other* port indices (both input and
-    // output).  For input/output, return the opposite direction plus any
-    // inout ports.
-    if (entryDirection == PortDirection.inout) {
-      return [
-        for (var i = 0; i < child.elkPorts.length; i++)
-          if (i != entryPortIndex) i,
-      ];
-    }
-
-    final oppositeDirection = entryDirection == PortDirection.input
-        ? PortDirection.output
-        : PortDirection.input;
-
-    return [
-      for (var i = 0; i < child.elkPorts.length; i++)
-        if (child.elkPorts[i].direction == oppositeDirection ||
-            child.elkPorts[i].direction == PortDirection.inout)
-          i,
-    ];
-  }
+  static List<int> _exitPortIndices(LayoutNode child, int entryPortIndex) =>
+      transparentTraversalExitPorts(child, entryPortIndex);
 
   /// Incrementally expand a port with pass-through traversal.
   ///

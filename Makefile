@@ -247,6 +247,10 @@ clean: clean-extension clean-web clean-linux
 real-clean: clean
 	@echo "Running flutter clean..."
 	@flutter clean
+	@echo "Removing Node dependency cache..."
+	-rm -rf "$(ROOT)/node_modules"
+	@echo "Removing dependency-source task state..."
+	-rm -f "$(ROOT)/.schematic_dependency_sources"
 	@echo "Removing staged assets (only when sources exist)"
 	@if [ -f "$(ROOT)/js_bridge/elk_layout_only.js" ]; then \
 		rm -f "$(ROOT)/assets/elk_layout_only.js"; \
@@ -256,9 +260,10 @@ real-clean: clean
 	@echo "Real-clean complete"
 
 clean-extension:
-	@echo "Cleaning extension build artifacts"
-	-rm -rf build/*
-	-rm -rf /tmp/vscode_pkg_* || true
+	@echo "Cleaning extension build and packaging artifacts"
+	-rm -rf "$(ROOT)/build/extension"
+	-rm -f "$(SLIM_ZIP)"
+	-rm -f "$(VSIX)"
 
 clean-flutter-build:
 	@echo "Cleaning Flutter build cache and artifacts"

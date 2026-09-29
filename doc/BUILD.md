@@ -107,7 +107,7 @@ Common targets:
 | `make install-local` | Install the extension zip into local VS Code |
 | `make install-remote` / `make install` | Install the extension zip into VS Code Server |
 | `make clean` | Remove extension, web, and Linux build artifacts |
-| `make real-clean` | Run `make clean`, `flutter clean`, and remove staged generated assets |
+| `make real-clean` | Run `make clean`, `flutter clean`, remove Node dependencies, dependency-source task state, and staged generated assets |
 
 Use `make help` for the current target list.
 

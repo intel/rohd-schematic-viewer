@@ -2,7 +2,7 @@
   "name": "rohd-schematic-viewer",
   "displayName": "ROHD Schematic Viewer",
   "description": "Visualize Yosys JSON netlist files as interactive schematics",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "rohd",
   "repository": {
     "type": "git",

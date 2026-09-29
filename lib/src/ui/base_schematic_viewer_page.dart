@@ -39,6 +39,10 @@ import 'package:rohd_schematic_viewer/src/ui/schematic_expansion_mode.dart';
 /// Contains common logic for layout computation, node toggling, and rendering.
 abstract class BaseSchematicViewerState<T extends StatefulWidget>
     extends State<T> {
+  /// Creates shared state for a schematic viewer page.
+  @protected
+  BaseSchematicViewerState();
+
   SchematicLayoutEngine? _layoutEngine;
 
   /// Dart schematic adapter (owns the graph in Dart).
