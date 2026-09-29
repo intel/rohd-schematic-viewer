@@ -183,7 +183,8 @@ class EmbeddedSchematicViewer extends StatefulWidget {
 
   /// Constructor for `EmbeddedSchematicViewer`.
   @Deprecated(
-    'Use EmbeddedSchematicViewer.fromJson, fromHierarchy, or fromAsset.',
+    'Use EmbeddedSchematicViewer.fromJson, fromNetlistMap, fromHierarchy, '
+    'or fromAsset.',
   )
   const EmbeddedSchematicViewer({
     super.key,

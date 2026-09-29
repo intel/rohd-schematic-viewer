@@ -264,6 +264,8 @@ clean-extension:
 	-rm -rf "$(ROOT)/build/extension"
 	-rm -f "$(SLIM_ZIP)"
 	-rm -f "$(VSIX)"
+	-rm -f "$(ROOT)"/build/*-slim.zip
+	-rm -f "$(ROOT)"/build/*.vsix
 
 clean-flutter-build:
 	@echo "Cleaning Flutter build cache and artifacts"

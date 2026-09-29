@@ -197,7 +197,7 @@ class NetlistSchematicConnectivity {
 
   static SchematicPortOccurrence _endpoint(LayoutNode node, ElkPort port) =>
       SchematicPortOccurrence(
-        nodePath: node.occurrence.path(),
+        nodePath: node.hierarchyNodeId ?? node.occurrence.path(),
         nodeAddress: node.occurrence.address,
         portId: port.id,
         direction: port.direction,
@@ -240,12 +240,12 @@ class NetlistSchematicConnectivity {
       return true;
     }
     for (final (nodeId, _) in [...hyperedge.sources, ...hyperedge.targets]) {
-      final occurrence = nodeMap[nodeId]?.occurrence;
-      if (occurrence == null) {
+      final node = nodeMap[nodeId];
+      final nodePath = node?.hierarchyNodeId ?? node?.occurrence.path();
+      if (nodePath == null) {
         continue;
       }
-      if (occurrence.path() == scopePath ||
-          occurrence.parent?.path() == scopePath) {
+      if (nodePath == scopePath || nodePath.startsWith('$scopePath/')) {
         return true;
       }
     }

@@ -10,6 +10,7 @@
 import 'dart:convert' show jsonEncode;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:rohd_hierarchy/rohd_hierarchy.dart' show BaseHierarchyAdapter;
 import 'package:rohd_schematic_viewer/schematic_connectivity.dart';
 
 const _netlist = r'''
@@ -37,6 +38,60 @@ const _netlist = r'''
       "netnames": {
         "a": {"bits": [1]},
         "y": {"bits": [2]}
+      }
+    }
+  }
+}
+''';
+
+const _hierarchicalNetlist = r'''
+{
+  "modules": {
+    "Top": {
+      "attributes": {"top": 1},
+      "ports": {
+        "top_a": {"direction": "input", "bits": [1]},
+        "top_y": {"direction": "output", "bits": [2]}
+      },
+      "cells": {
+        "u1": {
+          "type": "Child",
+          "port_directions": {
+            "a": "input",
+            "y": "output"
+          },
+          "connections": {
+            "a": [1],
+            "y": [2]
+          }
+        }
+      },
+      "netnames": {
+        "top_a": {"bits": [1]},
+        "top_y": {"bits": [2]}
+      }
+    },
+    "Child": {
+      "ports": {
+        "a": {"direction": "input", "bits": [10]},
+        "y": {"direction": "output", "bits": [11]}
+      },
+      "cells": {
+        "inverter": {
+          "type": "$_NOT_",
+          "port_directions": {
+            "A": "input",
+            "Y": "output"
+          },
+          "connections": {
+            "A": [10],
+            "Y": [11]
+          }
+        }
+      },
+      "netnames": {
+        "a": {"bits": [10]},
+        "y": {"bits": [11]}
       }
     }
   }
@@ -99,6 +154,114 @@ void main() {
     expect(endpoints, hasLength(1));
     expect(endpoints.single.direction.toLowerCase(), 'output');
     expect(endpoints.single.nodePath, isNot(contains('inverter')));
+  });
+
+  test('uses canonical endpoint paths with an external hierarchy', () {
+    final externalHierarchy = BaseHierarchyAdapter.fromTree(
+      HierarchyOccurrence(
+        name: 'Top',
+        definition: 'Top',
+        signals: [
+          SignalOccurrence(
+            name: 'a',
+            width: 1,
+            direction: 'input',
+            portIndex: 0,
+          ),
+          SignalOccurrence(
+            name: 'y',
+            width: 1,
+            direction: 'output',
+            portIndex: 1,
+          ),
+        ],
+        children: [
+          HierarchyOccurrence(
+            name: 'inverter',
+            definition: r'$_NOT_',
+            isPrimitive: true,
+          ),
+        ],
+      ),
+    );
+    final externalConnectivity = NetlistSchematicConnectivity.fromJson(
+      _netlist,
+      externalHierarchy: externalHierarchy,
+    );
+    final input = externalConnectivity.hierarchy.root.signals.singleWhere(
+      (signal) => signal.name == 'a',
+    );
+
+    final endpoints = externalConnectivity.fanout(input);
+
+    expect(
+      endpoints.map((endpoint) => endpoint.nodePath),
+      contains('Top/inverter'),
+    );
+  });
+
+  test('matches child signal scope with an external hierarchy', () {
+    final externalHierarchy = BaseHierarchyAdapter.fromTree(
+      HierarchyOccurrence(
+        name: 'Top',
+        definition: 'Top',
+        signals: [
+          SignalOccurrence(
+            name: 'top_a',
+            width: 1,
+            direction: 'input',
+            portIndex: 0,
+          ),
+          SignalOccurrence(
+            name: 'top_y',
+            width: 1,
+            direction: 'output',
+            portIndex: 1,
+          ),
+        ],
+        children: [
+          HierarchyOccurrence(
+            name: 'u1',
+            definition: 'Child',
+            signals: [
+              SignalOccurrence(
+                name: 'a',
+                width: 1,
+                direction: 'input',
+                portIndex: 0,
+              ),
+              SignalOccurrence(
+                name: 'y',
+                width: 1,
+                direction: 'output',
+                portIndex: 1,
+              ),
+            ],
+            children: [
+              HierarchyOccurrence(
+                name: 'inverter',
+                definition: r'$_NOT_',
+                isPrimitive: true,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+    final externalConnectivity = NetlistSchematicConnectivity.fromJson(
+      _hierarchicalNetlist,
+      externalHierarchy: externalHierarchy,
+    );
+    final childInput = externalConnectivity
+        .hierarchy.root.children.single.signals
+        .singleWhere((signal) => signal.name == 'a');
+
+    final endpoints = externalConnectivity.fanout(childInput);
+
+    expect(
+      endpoints.map((endpoint) => endpoint.nodePath),
+      contains('Top/u1/inverter'),
+    );
   });
 }
 
