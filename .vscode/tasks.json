@@ -8,9 +8,14 @@
             "options": {
                 "cwd": "${workspaceFolder}",
                 "env": {
-                    "ROHD_GIT_REF": "${input:rohdSourceValue}",
-                    "ROHD_LOCAL_PATH": "${input:rohdSourceValue}"
+                    "SCHEMATIC_PROMPT_SOURCE_VALUE": "1"
                 }
+            },
+            "presentation": {
+                "reveal": "always",
+                "focus": true,
+                "panel": "dedicated",
+                "clear": true
             },
             "problemMatcher": [],
             "detail": "Select hosted, Git, or local for rohd."
@@ -22,9 +27,14 @@
             "options": {
                 "cwd": "${workspaceFolder}",
                 "env": {
-                    "ROHD_GIT_REF": "${input:rohdSourceValue}",
-                    "ROHD_LOCAL_PATH": "${input:rohdSourceValue}"
+                    "SCHEMATIC_PROMPT_SOURCE_VALUE": "1"
                 }
+            },
+            "presentation": {
+                "reveal": "always",
+                "focus": true,
+                "panel": "dedicated",
+                "clear": true
             },
             "problemMatcher": [],
             "detail": "Select hosted, Git, or local for rohd_hierarchy and rohd_source_navigator."
@@ -36,9 +46,14 @@
             "options": {
                 "cwd": "${workspaceFolder}",
                 "env": {
-                    "ROHD_GIT_REF": "${input:rohdSourceValue}",
-                    "ROHD_LOCAL_PATH": "${input:rohdSourceValue}"
+                    "SCHEMATIC_PROMPT_SOURCE_VALUE": "1"
                 }
+            },
+            "presentation": {
+                "reveal": "always",
+                "focus": true,
+                "panel": "dedicated",
+                "clear": true
             },
             "problemMatcher": [],
             "detail": "Select hosted, Git, or local for all three companion packages."
@@ -50,9 +65,14 @@
             "options": {
                 "cwd": "${workspaceFolder}",
                 "env": {
-                    "ROHD_GIT_REF": "${input:rohdSourceValue}",
-                    "ROHD_LOCAL_PATH": "${input:rohdSourceValue}"
+                    "SCHEMATIC_PROMPT_SOURCE_VALUE": "1"
                 }
+            },
+            "presentation": {
+                "reveal": "always",
+                "focus": true,
+                "panel": "dedicated",
+                "clear": true
             },
             "problemMatcher": [],
             "detail": "Select hosted, Git, or local for every ROHD-related dependency."
@@ -118,12 +138,6 @@
             "description": "Source for every ROHD-related dependency",
             "options": ["hosted", "git", "local"],
             "default": "hosted"
-        },
-        {
-            "id": "rohdSourceValue",
-            "type": "promptString",
-            "description": "Git ref or local ROHD checkout path (leave blank for the default)",
-            "default": ""
         }
     ]
 }

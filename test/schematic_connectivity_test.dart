@@ -7,6 +7,8 @@
 // 2026 September 29
 // Author: Desmond Kirkpatrick <desmond.a.kirkpatrick@intel.com>
 
+import 'dart:convert' show jsonEncode;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rohd_schematic_viewer/schematic_connectivity.dart';
 
@@ -79,5 +81,74 @@ void main() {
       endpoints.every((endpoint) => !endpoint.nodePath.endsWith('/inverter')),
       isTrue,
     );
+  });
+
+  test('traverses long transparent primitive chains', () {
+    final chainedConnectivity = NetlistSchematicConnectivity.fromJson(
+      _transparentChainNetlist(256),
+    );
+    final input = chainedConnectivity.hierarchy.root.signals.singleWhere(
+      (signal) => signal.name == 'a',
+    );
+
+    final endpoints = chainedConnectivity.fanout(
+      input,
+      mode: SchematicTraversalMode.transparent,
+    );
+
+    expect(endpoints, hasLength(1));
+    expect(endpoints.single.direction.toLowerCase(), 'output');
+    expect(endpoints.single.nodePath, isNot(contains('inverter')));
+  });
+}
+
+String _transparentChainNetlist(int gateCount) {
+  final cells = <String, Object?>{};
+  final netnames = <String, Object?>{
+    'a': {
+      'bits': [1],
+    },
+    'y': {
+      'bits': [gateCount + 1],
+    },
+  };
+
+  for (var index = 0; index < gateCount; index++) {
+    cells['inverter_$index'] = {
+      'type': r'$_NOT_',
+      'port_directions': {
+        'A': 'input',
+        'Y': 'output',
+      },
+      'connections': {
+        'A': [index + 1],
+        'Y': [index + 2],
+      },
+    };
+    if (index < gateCount - 1) {
+      netnames['n$index'] = {
+        'bits': [index + 2],
+      };
+    }
+  }
+
+  return jsonEncode({
+    'modules': {
+      'Top': {
+        'attributes': {'top': 1},
+        'ports': {
+          'a': {
+            'direction': 'input',
+            'bits': [1],
+          },
+          'y': {
+            'direction': 'output',
+            'bits': [gateCount + 1],
+          },
+        },
+        'cells': cells,
+        'netnames': netnames,
+      },
+    },
   });
 }

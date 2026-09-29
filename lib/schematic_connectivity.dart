@@ -10,6 +10,8 @@
 /// Public schematic connectivity API for read-only tooling.
 library;
 
+import 'dart:collection' show ListQueue;
+
 import 'package:rohd_hierarchy/rohd_hierarchy.dart';
 import 'package:rohd_schematic_viewer/src/schematic/netlist_schematic_adapter.dart';
 import 'package:rohd_schematic_viewer/src/schematic/schematic_data.dart';
@@ -21,6 +23,12 @@ export 'package:rohd_hierarchy/rohd_hierarchy.dart'
         HierarchyService,
         OccurrenceAddress,
         SignalOccurrence;
+
+typedef _Endpoint = (String nodeId, int portIndex);
+typedef _HyperedgeIndex = ({
+  Map<_Endpoint, List<LayoutHyperedge>> bySource,
+  Map<_Endpoint, List<LayoutHyperedge>> byTarget,
+});
 
 /// How far schematic connectivity traversal should pass through hierarchy.
 enum SchematicTraversalMode {
@@ -59,9 +67,12 @@ class SchematicPortOccurrence {
 /// This facade intentionally hides the mutable layout graph and adapter used
 /// by the interactive viewer.
 class NetlistSchematicConnectivity {
-  NetlistSchematicConnectivity._(this._adapter);
+  NetlistSchematicConnectivity._(NetlistSchematicAdapter adapter)
+      : _adapter = adapter,
+        _hyperedgeIndex = _buildHyperedgeIndex(adapter.schematic.hyperedges);
 
   final NetlistSchematicAdapter _adapter;
+  final _HyperedgeIndex _hyperedgeIndex;
 
   /// Parses [netlistJson] into a read-only connectivity model.
   factory NetlistSchematicConnectivity.fromJson(
@@ -117,16 +128,18 @@ class NetlistSchematicConnectivity {
   }
 
   List<SchematicPortOccurrence> _transparentEndpoints(
-    List<(String, int)> initialEndpoints, {
+    List<_Endpoint> initialEndpoints, {
     required bool traceUpstream,
   }) {
     final schematic = _adapter.schematic;
-    final queue = [...initialEndpoints];
-    final visited = <(String, int)>{};
-    final terminalEndpoints = <(String, int)>[];
+    final queue = ListQueue<_Endpoint>.from(initialEndpoints);
+    final visited = <_Endpoint>{};
+    final terminalEndpoints = <_Endpoint>[];
+    final hyperedgesByExit =
+        traceUpstream ? _hyperedgeIndex.byTarget : _hyperedgeIndex.bySource;
 
     while (queue.isNotEmpty) {
-      final endpoint = queue.removeAt(0);
+      final endpoint = queue.removeFirst();
       if (!visited.add(endpoint)) {
         continue;
       }
@@ -143,11 +156,8 @@ class NetlistSchematicConnectivity {
 
       for (final exitPort in transparentTraversalExitPorts(node, endpoint.$2)) {
         final exitEndpoint = (node.id, exitPort);
-        for (final hyperedge in schematic.hyperedges) {
-          final exits = traceUpstream ? hyperedge.targets : hyperedge.sources;
-          if (!exits.contains(exitEndpoint)) {
-            continue;
-          }
+        for (final hyperedge
+            in hyperedgesByExit[exitEndpoint] ?? const <LayoutHyperedge>[]) {
           queue.addAll(
             traceUpstream ? hyperedge.sources : hyperedge.targets,
           );
@@ -157,8 +167,26 @@ class NetlistSchematicConnectivity {
     return _describeEndpoints(terminalEndpoints);
   }
 
+  static _HyperedgeIndex _buildHyperedgeIndex(
+    Iterable<LayoutHyperedge> hyperedges,
+  ) {
+    final bySource = <_Endpoint, List<LayoutHyperedge>>{};
+    final byTarget = <_Endpoint, List<LayoutHyperedge>>{};
+
+    for (final hyperedge in hyperedges) {
+      for (final endpoint in hyperedge.sources) {
+        bySource.putIfAbsent(endpoint, () => []).add(hyperedge);
+      }
+      for (final endpoint in hyperedge.targets) {
+        byTarget.putIfAbsent(endpoint, () => []).add(hyperedge);
+      }
+    }
+
+    return (bySource: bySource, byTarget: byTarget);
+  }
+
   List<SchematicPortOccurrence> _describeEndpoints(
-    List<(String, int)> endpoints,
+    List<_Endpoint> endpoints,
   ) =>
       [
         for (final (nodeId, portIndex) in endpoints)

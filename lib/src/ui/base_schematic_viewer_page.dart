@@ -332,14 +332,25 @@ abstract class BaseSchematicViewerState<T extends StatefulWidget>
   ///
   /// Prefer using `expansionMode` instead of `expandAll`.  When
   /// `expansionMode` is provided, `expandAll` is ignored.
+  ///
+  /// When [shouldCommit] is provided, the parsed adapter and computed layout
+  /// are installed only while it returns `true`.
   Future<void> computeLayout(
     String jsonData, {
     bool expandAll = false,
     SchematicExpansionMode? expansionMode,
+    bool Function()? shouldCommit,
   }) async {
+    bool requestIsCurrent() =>
+        mounted && (shouldCommit == null || shouldCommit());
+
+    if (!requestIsCurrent()) {
+      return;
+    }
+
     final engine = _layoutEngine;
     if (engine == null) {
-      if (!mounted) {
+      if (!requestIsCurrent()) {
         return;
       }
       setState(() {
@@ -353,7 +364,6 @@ abstract class BaseSchematicViewerState<T extends StatefulWidget>
       if (kPerfLog) {
         debugPrint('[PERF] computeLayout ENTERED');
       }
-      schematicJson = jsonData;
       SchematicLayoutResult layoutResult;
 
       // Yield a frame so the loading indicator can render before
@@ -364,7 +374,7 @@ abstract class BaseSchematicViewerState<T extends StatefulWidget>
           completer.complete();
         });
         await completer.future;
-        if (!mounted) {
+        if (!requestIsCurrent()) {
           return;
         }
       }
@@ -377,7 +387,7 @@ abstract class BaseSchematicViewerState<T extends StatefulWidget>
       final parseStart = DateTime.now();
 
       // Parse netlist JSON with the unified adapter
-      schematicAdapter = NetlistSchematicAdapter.fromJson(jsonData);
+      final parsedAdapter = NetlistSchematicAdapter.fromJson(jsonData);
 
       final parseEnd = DateTime.now();
       if (kPerfLog) {
@@ -397,12 +407,12 @@ abstract class BaseSchematicViewerState<T extends StatefulWidget>
 
       // Apply the requested expansion to the in-memory graph before the
       // first ELK layout pass.
-      _applyExpansionMode(effectiveMode);
+      _applyExpansionMode(parsedAdapter, effectiveMode);
 
       // Serialize to JS format and compute layout with timeout.
       // toJsGraph() handles all expansion states (collapsed, partial, full).
       final jsStart = DateTime.now();
-      final elkGraph = schematicAdapter!.schematic.toJsGraph();
+      final elkGraph = parsedAdapter.schematic.toJsGraph();
       final jsEnd = DateTime.now();
       if (kPerfLog) {
         debugPrint(
@@ -428,24 +438,28 @@ abstract class BaseSchematicViewerState<T extends StatefulWidget>
         );
       }
 
-      if (!mounted) {
+      if (!requestIsCurrent()) {
         return;
       }
 
       if (layoutResult.hasError) {
         setState(() {
+          schematicJson = jsonData;
+          schematicAdapter = parsedAdapter;
           error = 'Layout error: ${layoutResult.error}';
           isLoading = false;
         });
         return;
       }
       setState(() {
+        schematicJson = jsonData;
+        schematicAdapter = parsedAdapter;
         layout = layoutResult;
         error = null;
         isLoading = false;
       });
     } on TimeoutException catch (e) {
-      if (!mounted) {
+      if (!requestIsCurrent()) {
         return;
       }
       setState(() {
@@ -453,7 +467,7 @@ abstract class BaseSchematicViewerState<T extends StatefulWidget>
         isLoading = false;
       });
     } on Exception catch (e) {
-      if (!mounted) {
+      if (!requestIsCurrent()) {
         return;
       }
       setState(() {
@@ -470,11 +484,10 @@ abstract class BaseSchematicViewerState<T extends StatefulWidget>
   /// `toJsGraph()` in `computeLayout`.  The adapter builder has already
   /// set the top module to blocks-only (the `defaultView` behaviour),
   /// so we undo/augment that as needed.
-  void _applyExpansionMode(SchematicExpansionMode mode) {
-    final adapter = schematicAdapter;
-    if (adapter == null) {
-      return;
-    }
+  void _applyExpansionMode(
+    NetlistSchematicAdapter adapter,
+    SchematicExpansionMode mode,
+  ) {
     final graph = adapter.schematic;
     final root = graph.root;
 

@@ -78,10 +78,12 @@ Use the central source selection in each task:
 - `Configure Widget Dependency`
 - `Configure All Dependencies`
 
-After the source selection, one blank value prompt is shown. Leave it blank
-for Hosted, to use `main` for Git, or to use `~/release/rohd` for Local.
-Enter a branch/tag or checkout path to override the corresponding default.
-The run tasks use the resulting configuration.
+Hosted completes immediately after the source selection. Git opens a terminal
+prompt prefilled with the current setting or
+`github.com/intel/rohd:main`; enter the repository and branch/tag together as
+`repository:ref`. Local opens a terminal prompt prefilled with the current
+checkout path or `~/release/rohd`. The run tasks use the resulting
+configuration.
 
 ## Make Targets
 

@@ -7,16 +7,10 @@
 // 2026 April
 // Author: Desmond Kirkpatrick <desmond.a.kirkpatrick@intel.com>
 
-import 'package:rohd_schematic_viewer/src/schematic/schematic.dart'
-    show SchematicGraph;
-import 'package:rohd_schematic_viewer/src/schematic/schematic_graph.dart'
-    show SchematicGraph;
-
 /// Controls the initial expansion state of the schematic after loading.
 ///
-/// These modes are a *rendering* concern — they control which
-/// [SchematicGraph] methods are called before the first ELK layout,
-/// not what data is in the JSON.
+/// These modes are a *rendering* concern. They control graph or hierarchy
+/// expansion before layout, not what data is present in the source.
 enum SchematicExpansionMode {
   /// Default: top module shows non-primitive sub-modules as blocks,
   /// no wires.  This is the `fromJson` default behaviour.
@@ -29,7 +23,9 @@ enum SchematicExpansionMode {
   /// Uses `SchematicGraph.expandNonPrimitivesRecursive`.
   blocksOnly,
 
-  /// Fully expanded with all wires visible at every level.
-  /// Uses `SchematicGraph.toggleNodeRecursive`.
+  /// Fully expanded with all available wires visible at every level.
+  ///
+  /// Uses `SchematicGraph.toggleNodeRecursive` for netlist-backed layouts.
+  /// Hierarchy-only layouts have no wires, so this behaves like [blocksOnly].
   fullyExpanded,
 }

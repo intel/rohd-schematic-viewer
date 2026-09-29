@@ -50,15 +50,16 @@ selection:
   `rohd_hierarchy`, `rohd_source_navigator`, and `rohd_devtools_widgets`.
 - **Configure All Dependencies** updates every ROHD-related package at once.
 
-Each task first shows a central `hosted`/`git`/`local` Quick Pick and then one
-blank value prompt:
+Each task first shows a central `hosted`/`git`/`local` Quick Pick:
 
-- For `hosted`, leave the value blank; the versions declared in
-  `pubspec.yaml` are used.
-- For `git`, leave the value blank to use `main`, or enter another branch or
-  tag.
-- For `local`, leave the value blank to use `~/release/rohd`, or enter another
-  checkout path.
+- `hosted` completes without a second prompt and uses the versions declared in
+  `pubspec.yaml`.
+- `git` opens an editable terminal prompt for `repository:ref`. The prompt
+  uses the current saved setting or defaults to
+  `github.com/intel/rohd:main`. GitHub shorthand is normalized to an HTTPS
+  URL.
+- `local` opens an editable terminal prompt for the ROHD checkout. The prompt
+  uses the current saved path or defaults to `~/release/rohd`.
 
 Hosted packages are not written to the override file.
 
@@ -70,7 +71,10 @@ The generated override file is also a starting point for custom development
 configurations. You may edit it manually after a task generates it. Before
 any later dependency-settings task replaces the file, the previous file is
 saved as `pubspec_overrides.yaml.disabled` (with a numeric suffix when
-needed), so manual changes are preserved and can be recovered.
+needed), so manual changes are preserved and can be recovered. Source and
+override updates are installed only after the complete configuration
+validates, so an invalid Git or Local selection leaves the working files
+unchanged.
 
 The build and run tasks do not prompt. They use the configuration selected by
 the configure task, or the hosted manifest when no override exists.
@@ -100,9 +104,10 @@ The path is not required when using hosted or Git sources.
 
 ### Selecting sources independently
 
-The VS Code tasks persist the three selections in the ignored
-`.schematic_dependency_sources` file. The equivalent command-line interface
-for configuring individual packages remains available:
+The VS Code tasks persist the source selections, Git repository and ref, and
+Local checkout path in the ignored `.schematic_dependency_sources` file. The
+equivalent command-line interface for configuring individual packages remains
+available:
 
 ```bash
 ./scripts/schematic_dev_mode.sh configure \
@@ -115,9 +120,9 @@ flutter pub get
 Supported sources are:
 
 - `hosted`: use the package's pub.dev constraint.
-- `git`: use the ROHD repository's `main` branch by default. Set
-  `ROHD_GIT_URL` and `ROHD_GIT_REF` to test another repository, branch, or
-  release tag.
+- `git`: use `github.com/intel/rohd:main` by default. Set `ROHD_GIT_URL` and
+  `ROHD_GIT_REF`, or set `ROHD_SOURCE_VALUE=repository:ref` with
+  `configure-group`, to test another repository, branch, or release tag.
 - `local`: use the checkout selected by `ROHD_LOCAL_PATH`, or
   `~/release/rohd` by default.
 

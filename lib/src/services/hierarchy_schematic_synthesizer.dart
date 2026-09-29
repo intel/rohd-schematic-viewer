@@ -129,9 +129,13 @@ class HierarchySchematicSynthesizer {
   ///
   /// [expandedNodes] contains the IDs of nodes that should be shown expanded
   /// (with their children visible inside them).
+  ///
+  /// Set [expandRoot] to `false` to render only the target module as a
+  /// collapsed block.
   SchematicLayoutResult synthesize({
     String? moduleId,
     Set<String>? expandedNodes,
+    bool expandRoot = true,
   }) {
     final targetNode =
         moduleId != null ? _resolveNode(moduleId) : _hierarchy.root;
@@ -152,6 +156,7 @@ class HierarchySchematicSynthesizer {
       y: 0,
       depth: 0,
       expandedNodes: expanded,
+      expandRoot: expandRoot,
       instances: instances,
       ports: ports,
     );
@@ -185,8 +190,10 @@ class HierarchySchematicSynthesizer {
     required Set<String> expandedNodes,
     required List<SchematicInstanceData> instances,
     required List<SchematicPortData> ports,
+    bool expandRoot = true,
   }) {
-    final isExpanded = expandedNodes.contains(node.path()) || depth == 0;
+    final isExpanded =
+        expandedNodes.contains(node.path()) || (depth == 0 && expandRoot);
     final hasChildren = node.children.isNotEmpty;
 
     // Calculate port requirements

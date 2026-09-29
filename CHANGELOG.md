@@ -14,6 +14,8 @@
 - Narrowed `schematic_viewer.dart` to the supported embedded-widget API.
 - Dependency-owned hierarchy, cross-probing, source-navigation, and shared widget contracts must now be imported from their owning packages.
 - Replaced the layout-backed connectivity API with `NetlistSchematicConnectivity` and immutable `SchematicPortOccurrence` values.
+- Applied initial and controlled expansion modes to hierarchy-only viewer layouts.
+- Updated dependency configuration tasks to prompt only for Git or Local details, prefill the current repository/ref or checkout path, and preserve working configuration files when a new selection fails validation.
 
 ### Deprecated
 
