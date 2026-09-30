@@ -561,6 +561,25 @@ class _EmbeddedSchematicViewerState
     _initialLoadInProgress = false;
   }
 
+  void _queueSelectedModuleForReload() {
+    _pendingModule = widget.selectedModule;
+    _hasPendingModule = true;
+  }
+
+  void _processPendingModuleSelection() {
+    if (!_hasPendingModule) {
+      return;
+    }
+    debugPrint(
+      '[EmbeddedSchematicViewer] Processing deferred module '
+      'selection after reload: ${_pendingModule?.path()}',
+    );
+    _hasPendingModule = false;
+    final pending = _pendingModule;
+    _pendingModule = null;
+    _selectModule(pending);
+  }
+
   // Tracks which nodes are expanded in light-synthesis mode.
   // Light synthesis has no schematicAdapter, so expansion state is tracked
   // here and each toggle triggers a full re-synthesis pass.
@@ -1192,18 +1211,7 @@ class _EmbeddedSchematicViewerState
 
       setLoading(loading: false, errorMessage: error);
       _initialLoadInProgress = false;
-
-      // Process any module selection that was deferred during initial load
-      if (_hasPendingModule) {
-        debugPrint(
-          '[EmbeddedSchematicViewer] Processing deferred module '
-          'selection after initial load: ${_pendingModule?.path()}',
-        );
-        _hasPendingModule = false;
-        final pending = _pendingModule;
-        _pendingModule = null;
-        _selectModule(pending);
-      }
+      _processPendingModuleSelection();
     } on Exception catch (e) {
       if (!_isCurrentLayoutLoad(loadGeneration)) {
         return;
@@ -1434,6 +1442,11 @@ class _EmbeddedSchematicViewerState
         expansionMode: expansionMode,
         shouldCommit: () => _isCurrentLayoutLoad(loadGeneration),
       );
+      if (_isCurrentLayoutLoad(loadGeneration) &&
+          error == null &&
+          layout != null) {
+        _processPendingModuleSelection();
+      }
     } on Exception catch (e) {
       if (_isCurrentLayoutLoad(loadGeneration)) {
         setLoading(
@@ -1517,6 +1530,8 @@ class _EmbeddedSchematicViewerState
     }
     final expansionModeChanged =
         widget._effectiveExpansionMode != oldWidget._effectiveExpansionMode;
+    final selectedModuleChanged =
+        widget.selectedModule != oldWidget.selectedModule;
 
     // Fast path: if the tab is hidden and none of the structural props
     // changed (hierarchy, netlist, selected module, visibility), skip all
@@ -1526,10 +1541,14 @@ class _EmbeddedSchematicViewerState
         !oldWidget.isVisible &&
         identical(widget.externalHierarchy, oldWidget.externalHierarchy) &&
         identical(widget.netlistJsonMap, oldWidget.netlistJsonMap) &&
-        widget.selectedModule == oldWidget.selectedModule &&
+        !selectedModuleChanged &&
         widget.schematicJson == oldWidget.schematicJson &&
         !expansionModeChanged) {
       return;
+    }
+
+    if (selectedModuleChanged && widget.externalHierarchy != null) {
+      _queueSelectedModuleForReload();
     }
 
     // IMPORTANT: process visibility transition before any early-return
@@ -1551,6 +1570,9 @@ class _EmbeddedSchematicViewerState
       );
       _moduleCache.clear();
       _lightSynthExpandedNodes.clear();
+      if (widget.externalHierarchy != null) {
+        _queueSelectedModuleForReload();
+      }
       if (!widget.isVisible) {
         _invalidateLayoutLoads();
         _initialLoadDeferred = true;
@@ -1663,12 +1685,13 @@ class _EmbeddedSchematicViewerState
     // Handle selected module changes from parent
     // When a submodule is selected, synthesize its schematic from hierarchy
     // This works even when netlistJsonMap is provided (ROHD format)
-    if (widget.selectedModule != oldWidget.selectedModule &&
-        widget.externalHierarchy != null) {
+    if (selectedModuleChanged && widget.externalHierarchy != null) {
       if (widget.isVisible && !_initialLoadInProgress) {
         debugPrint(
           '[EmbeddedSchematicViewer] Selected module changed, updating',
         );
+        _hasPendingModule = false;
+        _pendingModule = null;
         _selectModule(widget.selectedModule);
       } else {
         // Defer expensive layout computation until the tab is visible
@@ -1685,8 +1708,6 @@ class _EmbeddedSchematicViewerState
           '$loadState, '
           'deferring',
         );
-        _pendingModule = widget.selectedModule;
-        _hasPendingModule = true;
       }
     }
 
@@ -1720,7 +1741,7 @@ class _EmbeddedSchematicViewerState
       }
     }
 
-    // Reload if the JSON changed
+    // Reload if the JSON or asset source changed.
     if (widget.schematicJson != oldWidget.schematicJson &&
         widget.schematicJson != null) {
       debugPrint('[EmbeddedSchematicViewer] Schematic JSON changed, reloading');
@@ -1732,6 +1753,13 @@ class _EmbeddedSchematicViewerState
           expansionMode: widget._effectiveExpansionMode,
         ),
       );
+    } else if (widget.assetPath != oldWidget.assetPath &&
+        widget.assetPath != null) {
+      debugPrint(
+        '[EmbeddedSchematicViewer] Asset path changed, reloading: '
+        '${widget.assetPath}',
+      );
+      unawaited(loadInitialSchematic());
     }
   }
 
@@ -1891,6 +1919,7 @@ class _EmbeddedSchematicViewerState
         error = null;
         isLoading = false;
       });
+      _processPendingModuleSelection();
     } on Exception catch (e, stackTrace) {
       if (!requestIsCurrent()) {
         return;

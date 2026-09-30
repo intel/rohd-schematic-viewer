@@ -69,10 +69,14 @@ class SchematicPortOccurrence {
 class NetlistSchematicConnectivity {
   NetlistSchematicConnectivity._(NetlistSchematicAdapter adapter)
       : _adapter = adapter,
-        _hyperedgeIndex = _buildHyperedgeIndex(adapter.schematic.hyperedges);
+        _hyperedgeIndex = _buildHyperedgeIndex(adapter.schematic.hyperedges),
+        _hyperedgeScopePaths = _buildHyperedgeScopePaths(
+          adapter.schematic.nodeMap.values,
+        );
 
   final NetlistSchematicAdapter _adapter;
   final _HyperedgeIndex _hyperedgeIndex;
+  final Map<LayoutHyperedge, String> _hyperedgeScopePaths;
 
   /// Parses [netlistJson] into a read-only connectivity model.
   factory NetlistSchematicConnectivity.fromJson(
@@ -112,7 +116,7 @@ class NetlistSchematicConnectivity {
     final initialEndpoints = <(String, int)>[];
     for (final hyperedge in schematic.hyperedges) {
       if (!_matchesSignal(signal, hyperedge.signal) ||
-          !_matchesScope(signal, hyperedge, schematic.nodeMap)) {
+          !_matchesScope(signal, hyperedge)) {
         continue;
       }
       final pairs = includeSources ? hyperedge.sources : hyperedge.targets;
@@ -185,6 +189,25 @@ class NetlistSchematicConnectivity {
     return (bySource: bySource, byTarget: byTarget);
   }
 
+  static Map<LayoutHyperedge, String> _buildHyperedgeScopePaths(
+    Iterable<LayoutNode> nodes,
+  ) {
+    final scopePaths = <LayoutHyperedge, String>{};
+
+    for (final node in nodes) {
+      final hyperedges = node.hyperedges;
+      if (hyperedges == null) {
+        continue;
+      }
+      final scopePath = node.hierarchyNodeId ?? node.occurrence.path();
+      for (final hyperedge in hyperedges) {
+        scopePaths[hyperedge] = scopePath;
+      }
+    }
+
+    return scopePaths;
+  }
+
   List<SchematicPortOccurrence> _describeEndpoints(
     List<_Endpoint> endpoints,
   ) =>
@@ -195,13 +218,16 @@ class NetlistSchematicConnectivity {
             _endpoint(node, node.elkPorts[portIndex]),
       ];
 
-  static SchematicPortOccurrence _endpoint(LayoutNode node, ElkPort port) =>
-      SchematicPortOccurrence(
-        nodePath: node.hierarchyNodeId ?? node.occurrence.path(),
-        nodeAddress: node.occurrence.address,
-        portId: port.id,
-        direction: port.direction,
-      );
+  SchematicPortOccurrence _endpoint(LayoutNode node, ElkPort port) {
+    final nodePath = node.hierarchyNodeId ?? node.occurrence.path();
+    return SchematicPortOccurrence(
+      nodePath: nodePath,
+      nodeAddress:
+          hierarchy.pathnameToAddress(nodePath) ?? node.occurrence.address,
+      portId: port.id,
+      direction: port.direction,
+    );
+  }
 
   static bool _matchesSignal(
     SignalOccurrence signal,
@@ -222,10 +248,9 @@ class NetlistSchematicConnectivity {
             signal.name == other.name);
   }
 
-  static bool _matchesScope(
+  bool _matchesScope(
     SignalOccurrence signal,
     LayoutHyperedge hyperedge,
-    Map<String, LayoutNode> nodeMap,
   ) {
     if (hyperedge.signal.address != null ||
         hyperedge.signal.path() != hyperedge.signal.name) {
@@ -239,16 +264,6 @@ class NetlistSchematicConnectivity {
     if (scopePath == null) {
       return true;
     }
-    for (final (nodeId, _) in [...hyperedge.sources, ...hyperedge.targets]) {
-      final node = nodeMap[nodeId];
-      final nodePath = node?.hierarchyNodeId ?? node?.occurrence.path();
-      if (nodePath == null) {
-        continue;
-      }
-      if (nodePath == scopePath || nodePath.startsWith('$scopePath/')) {
-        return true;
-      }
-    }
-    return false;
+    return _hyperedgeScopePaths[hyperedge] == scopePath;
   }
 }

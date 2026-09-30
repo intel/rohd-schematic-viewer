@@ -98,6 +98,72 @@ const _hierarchicalNetlist = r'''
 }
 ''';
 
+const _nestedSameNameNetlist = r'''
+{
+  "modules": {
+    "Top": {
+      "attributes": {"top": 1},
+      "ports": {
+        "input": {"direction": "input", "bits": [1]},
+        "output": {"direction": "output", "bits": [2]}
+      },
+      "cells": {
+        "u1": {
+          "type": "Child",
+          "port_directions": {
+            "a": "input",
+            "y": "output"
+          },
+          "connections": {
+            "a": [1],
+            "y": [2]
+          }
+        }
+      },
+      "netnames": {
+        "mid": {"bits": [1]},
+        "output": {"bits": [2]}
+      }
+    },
+    "Child": {
+      "ports": {
+        "a": {"direction": "input", "bits": [10]},
+        "y": {"direction": "output", "bits": [11]}
+      },
+      "cells": {
+        "first": {
+          "type": "$_NOT_",
+          "port_directions": {
+            "A": "input",
+            "Y": "output"
+          },
+          "connections": {
+            "A": [10],
+            "Y": [12]
+          }
+        },
+        "second": {
+          "type": "$_NOT_",
+          "port_directions": {
+            "A": "input",
+            "Y": "output"
+          },
+          "connections": {
+            "A": [12],
+            "Y": [11]
+          }
+        }
+      },
+      "netnames": {
+        "a": {"bits": [10]},
+        "mid": {"bits": [12]},
+        "y": {"bits": [11]}
+      }
+    }
+  }
+}
+''';
+
 void main() {
   late NetlistSchematicConnectivity connectivity;
 
@@ -193,10 +259,14 @@ void main() {
     );
 
     final endpoints = externalConnectivity.fanout(input);
+    final inverterEndpoint = endpoints.singleWhere(
+      (endpoint) => endpoint.nodePath == 'Top/inverter',
+    );
 
+    expect(inverterEndpoint.nodeAddress, isNotNull);
     expect(
-      endpoints.map((endpoint) => endpoint.nodePath),
-      contains('Top/inverter'),
+      inverterEndpoint.nodeAddress,
+      externalHierarchy.root.children.single.address,
     );
   });
 
@@ -261,6 +331,81 @@ void main() {
     expect(
       endpoints.map((endpoint) => endpoint.nodePath),
       contains('Top/u1/inverter'),
+    );
+  });
+
+  test('does not match a same-name signal in the parent scope', () {
+    final externalHierarchy = BaseHierarchyAdapter.fromTree(
+      HierarchyOccurrence(
+        name: 'Top',
+        definition: 'Top',
+        signals: [
+          SignalOccurrence(
+            name: 'input',
+            width: 1,
+            direction: 'input',
+            portIndex: 0,
+          ),
+          SignalOccurrence(
+            name: 'output',
+            width: 1,
+            direction: 'output',
+            portIndex: 1,
+          ),
+          SignalOccurrence(name: 'mid', width: 1),
+        ],
+        children: [
+          HierarchyOccurrence(
+            name: 'u1',
+            definition: 'Child',
+            signals: [
+              SignalOccurrence(
+                name: 'a',
+                width: 1,
+                direction: 'input',
+                portIndex: 0,
+              ),
+              SignalOccurrence(
+                name: 'y',
+                width: 1,
+                direction: 'output',
+                portIndex: 1,
+              ),
+              SignalOccurrence(name: 'mid', width: 1),
+            ],
+            children: [
+              HierarchyOccurrence(
+                name: 'first',
+                definition: r'$_NOT_',
+                isPrimitive: true,
+              ),
+              HierarchyOccurrence(
+                name: 'second',
+                definition: r'$_NOT_',
+                isPrimitive: true,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+    final externalConnectivity = NetlistSchematicConnectivity.fromJson(
+      _nestedSameNameNetlist,
+      externalHierarchy: externalHierarchy,
+    );
+    final childMid = externalConnectivity.hierarchy.root.children.single.signals
+        .singleWhere((signal) => signal.name == 'mid');
+
+    final drivers = externalConnectivity.fanin(childMid);
+    final consumers = externalConnectivity.fanout(childMid);
+
+    expect(
+      drivers.map((endpoint) => endpoint.nodePath),
+      orderedEquals(['Top/u1/first']),
+    );
+    expect(
+      consumers.map((endpoint) => endpoint.nodePath),
+      orderedEquals(['Top/u1/second']),
     );
   });
 }

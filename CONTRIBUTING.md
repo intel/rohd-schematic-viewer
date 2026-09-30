@@ -42,8 +42,10 @@ The [ROHD Forum](https://intel.github.io/rohd-website/forum/rohd-forum/) is a pe
 
 ### Requirements
 
-You must have [Dart](https://dart.dev/) installed on your system to use ROHD and the ROHD Schematic Viewer. You can find detailed instructions for how to install Dart here:
-<https://dart.dev/get-dart>
+Local development and embedded use require the
+[Flutter SDK](https://docs.flutter.dev/get-started/install), which includes
+the compatible Dart SDK. Users of the hosted viewer do not need Flutter or
+Dart installed locally.
 
 ### Setup Recommendations
 
@@ -72,8 +74,8 @@ Once requirements are installed, you can clone and run the test suite:
 ```shell
 git clone https://github.com/intel/rohd-schematic-viewer.git
 cd rohd-schematic-viewer
-dart pub get
-dart test
+flutter pub get
+flutter test
 ```
 
 ## How to Contribute
@@ -88,9 +90,11 @@ Please report any bugs you find as a GitHub issue. Please try to provide as much
 
 Some helpful information you can include:
 
-* Output of `dart --version`
-* Your dependencies from `pubspec.yaml`
-* The version of ROHD and ROHD Schematic Viewer you're using
+* The ROHD Schematic Viewer version
+* Your operating system or device and browser or host-application version
+* For local builds or embedded use, output from `flutter --version`
+* For embedded use, the relevant dependencies from `pubspec.yaml` and the
+  ROHD version
 * Command you ran and output
 * Reproduction code and steps
 

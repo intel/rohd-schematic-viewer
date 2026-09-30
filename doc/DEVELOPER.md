@@ -2,13 +2,13 @@
 
 ## Dependency configuration
 
-The release [`pubspec.yaml`](../pubspec.yaml) uses hosted packages from
-pub.dev:
+The release [`pubspec.yaml`](../pubspec.yaml) is the source of truth for
+current dependency constraints. Its ROHD-related hosted packages are:
 
-- `rohd: ^0.6.11`
-- `rohd_devtools_widgets: ^0.1.1`
-- `rohd_hierarchy: ^0.1.0`
-- `rohd_source_navigator: ^0.1.0`
+- `rohd`
+- `rohd_devtools_widgets`
+- `rohd_hierarchy`
+- `rohd_source_navigator`
 
 The release manifest contains no dependency overrides. Development-only Git
 and local sources are configured through
@@ -57,15 +57,18 @@ Each task first shows a central `hosted`/`git`/`local` Quick Pick:
 - `git` opens an editable terminal prompt for `repository:ref`. The prompt
   uses the current saved setting or defaults to
   `github.com/intel/rohd:main`. GitHub shorthand is normalized to an HTTPS
-  URL.
+  URL. The repository and ref are shared by every Git-backed group.
 - `local` opens an editable terminal prompt for the ROHD checkout. The prompt
-  uses the current saved path or defaults to `~/release/rohd`.
+  uses the current saved path or defaults to `~/release/rohd`. The checkout
+  root is shared by every Local-backed group.
 
 Hosted packages are not written to the override file.
 
-Each task preserves the other dependency groups, generates an ignored
-`pubspec_overrides.yaml` containing only non-hosted packages, and runs
-`flutter pub get`.
+Each task preserves the other dependency groups' `hosted`/`git`/`local`
+selections, generates an ignored `pubspec_overrides.yaml` containing only
+non-hosted packages, and runs `flutter pub get`. Changing the shared Git
+repository/ref or Local checkout root updates every existing group that uses
+that source.
 
 The generated override file is also a starting point for custom development
 configurations. You may edit it manually after a task generates it. Before
@@ -102,12 +105,12 @@ ROHD_LOCAL_PATH=/path/to/rohd \
 
 The path is not required when using hosted or Git sources.
 
-### Selecting sources independently
+### Selecting group sources
 
-The VS Code tasks persist the source selections, Git repository and ref, and
-Local checkout path in the ignored `.schematic_dependency_sources` file. The
-equivalent command-line interface for configuring individual packages remains
-available:
+The VS Code tasks persist independent group source selections plus the shared
+Git repository/ref and Local checkout root in the ignored
+`.schematic_dependency_sources` file. The equivalent command-line interface
+for configuring individual packages remains available:
 
 ```bash
 ./scripts/schematic_dev_mode.sh configure \
@@ -122,9 +125,11 @@ Supported sources are:
 - `hosted`: use the package's pub.dev constraint.
 - `git`: use `github.com/intel/rohd:main` by default. Set `ROHD_GIT_URL` and
   `ROHD_GIT_REF`, or set `ROHD_SOURCE_VALUE=repository:ref` with
-  `configure-group`, to test another repository, branch, or release tag.
+  `configure-group`, to change the shared repository, branch, or release tag
+  for every Git-backed group.
 - `local`: use the checkout selected by `ROHD_LOCAL_PATH`, or
-  `~/release/rohd` by default.
+  `~/release/rohd` by default. This checkout root is shared by every
+  Local-backed group.
 
 Only the listed packages are overridden. Unlisted packages continue to use
 the dependencies in `pubspec.yaml`. This makes the same command shape

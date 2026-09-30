@@ -74,18 +74,23 @@ For example:
 Modes:
   manifest         Disable overrides and use pubspec.yaml sources.
   configure-group  Configure one dependency group or all dependencies.
-  local-rohd       Local ROHD + hierarchy; Git DevTools-extension packages.
-  local-extension  Pub.dev ROHD; local hierarchy + DevTools-extension packages.
+  local-rohd       Local ROHD + hierarchy; hosted extension packages.
+  local-extension  Hosted ROHD; local hierarchy + extension packages.
   local-all        Local ROHD, hierarchy, and DevTools-extension packages.
   show             Print the current generated override file, if present.
 
 The default local ROHD checkout is ~/release/rohd.
 Set ROHD_LOCAL_PATH to use a different checkout.
 
-Git sources use ROHD_GIT_URL and default to the main branch. Set ROHD_GIT_REF
-to use another branch or tag. Hosted constraints are read from pubspec.yaml
-and can be overridden with the package-specific ROHD_*_HOSTED_CONSTRAINT
-variables.
+All Git-backed groups share one ROHD_GIT_URL and ROHD_GIT_REF because every
+configured package comes from the ROHD monorepo. All Local-backed groups
+likewise share one ROHD_LOCAL_PATH. Changing either shared setting while
+configuring one group updates every other group that uses that source, without
+changing the other groups' hosted/git/local selections.
+
+Git sources default to the main branch. Set ROHD_GIT_REF to use another branch
+or tag. Hosted constraints are read from pubspec.yaml and can be overridden
+with the package-specific ROHD_*_HOSTED_CONSTRAINT variables.
 
 Set SCHEMATIC_PROMPT_SOURCE_VALUE=1 with configure-group to prompt for a Git
 repository:ref or Local checkout path. Set ROHD_SOURCE_VALUE to provide the
@@ -242,11 +247,11 @@ prompt_source_value() {
   case "$source" in
     git)
       default_value="$(display_git_source)"
-      prompt="ROHD Git repository:ref: "
+      prompt="Shared ROHD Git repository:ref: "
       ;;
     local)
       default_value="$(display_local_path "$rohd_path")"
-      prompt="Local ROHD checkout path: "
+      prompt="Shared local ROHD checkout path: "
       ;;
   esac
 
@@ -419,6 +424,16 @@ write_group_configuration() {
   fi
   validate_source "$source"
 
+  case "$source" in
+    git)
+      echo "Git repository/ref is shared by all Git-backed dependency groups."
+      ;;
+    local)
+      echo "Local checkout path is shared by all Local-backed dependency groups."
+      ;;
+    hosted) ;;
+  esac
+
   if [[ -f "$source_state" ]]; then
     while IFS='=' read -r package saved_source; do
       case "$package" in
@@ -481,16 +496,12 @@ write_group_configuration() {
   ensure_managed_or_absent
   create_temporary_file
   generated_state="$temporary_file"
-  cat >"$generated_state" <<STATE
-rohd=$rohd_source
-rohd_hierarchy=$hierarchy_source
-rohd_devtools_widgets=$widgets_source
-rohd_source_navigator=$navigator_source
-git_url=$rohd_git_url
-git_ref=$rohd_git_ref
-local_path=$rohd_path
-STATE
-  chmod 0644 "$generated_state"
+  generate_source_state \
+    "$generated_state" \
+    "$rohd_source" \
+    "$hierarchy_source" \
+    "$widgets_source" \
+    "$navigator_source"
 
   create_temporary_file
   generated_overrides="$temporary_file"
@@ -500,6 +511,33 @@ STATE
     rohd_devtools_widgets "$widgets_source" \
     rohd_source_navigator "$navigator_source"
   install_configured_overrides "$generated_overrides"
+  mv -- "$generated_state" "$source_state"
+}
+
+generate_source_state() {
+  local output="$1"
+  local rohd_source="$2"
+  local hierarchy_source="$3"
+  local widgets_source="$4"
+  local navigator_source="$5"
+
+  cat >"$output" <<STATE
+rohd=$rohd_source
+rohd_hierarchy=$hierarchy_source
+rohd_devtools_widgets=$widgets_source
+rohd_source_navigator=$navigator_source
+git_url=$rohd_git_url
+git_ref=$rohd_git_ref
+local_path=$rohd_path
+STATE
+  chmod 0644 "$output"
+}
+
+persist_source_state() {
+  local generated_state
+  create_temporary_file
+  generated_state="$temporary_file"
+  generate_source_state "$generated_state" "$@"
   mv -- "$generated_state" "$source_state"
 }
 
@@ -567,9 +605,18 @@ case "$mode" in
     write_overrides no no
     rm -f -- "$source_state"
     ;;
-  local-rohd|lr-he) write_overrides yes no ;;
-  local-extension|hr-le) write_overrides no yes ;;
-  local-all|lr-le) write_overrides yes yes ;;
+  local-rohd|lr-he)
+    write_overrides yes no
+    persist_source_state local local hosted hosted
+    ;;
+  local-extension|hr-le)
+    write_overrides no yes
+    persist_source_state hosted local local local
+    ;;
+  local-all|lr-le)
+    write_overrides yes yes
+    persist_source_state local local local local
+    ;;
   show)
     if [[ -f "$overrides" ]]; then
       cat "$overrides"

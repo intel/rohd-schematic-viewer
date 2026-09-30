@@ -18,7 +18,7 @@
                 "clear": true
             },
             "problemMatcher": [],
-            "detail": "Select hosted, Git, or local for rohd."
+            "detail": "Select hosted, Git, or local for rohd. Git repository/ref and local root are shared settings."
         },
         {
             "label": "Configure Package Dependency",
@@ -37,7 +37,7 @@
                 "clear": true
             },
             "problemMatcher": [],
-            "detail": "Select hosted, Git, or local for rohd_hierarchy and rohd_source_navigator."
+            "detail": "Select a source for rohd_hierarchy and rohd_source_navigator. Git repository/ref and local root are shared settings."
         },
         {
             "label": "Configure Widget Dependency",
@@ -56,7 +56,7 @@
                 "clear": true
             },
             "problemMatcher": [],
-            "detail": "Select hosted, Git, or local for all three companion packages."
+            "detail": "Select a source for all three companion packages. Git repository/ref and local root are shared settings."
         },
         {
             "label": "Configure All Dependencies",
@@ -75,7 +75,7 @@
                 "clear": true
             },
             "problemMatcher": [],
-            "detail": "Select hosted, Git, or local for every ROHD-related dependency."
+            "detail": "Select a source for every ROHD dependency. Git repository/ref and local root are shared settings."
         },
         {
             "label": "ROHD Schematic Viewer: Web Debug",

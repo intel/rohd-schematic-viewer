@@ -31,18 +31,25 @@ flutter doctor
 
 ## Dependency Modes
 
-The repository builds from the `fix/devtools-popup-menu-material-ui` branch of
-`https://github.com/desmonddak/rohd.git` by default. Local ROHD checkouts are
-opt-in.
+By default, the repository uses the hosted dependencies declared in
+`pubspec.yaml`. Git and local overrides are opt-in. Git selection defaults to
+`github.com/intel/rohd:main`, while the default local checkout is
+`~/release/rohd`. Dependency groups retain independent `hosted`/`git`/`local`
+selections, but all Git-backed groups share one repository and ref, and all
+Local-backed groups share one checkout root. Changing a shared setting updates
+every group currently using that source.
 
 The command-line script still supports these convenience modes:
 
 | Mode | Meaning |
 | --- | --- |
 | `manifest` | Use the dependency sources in `pubspec.yaml` |
-| `local-rohd` | Local ROHD and hierarchy; Git DevTools-extension packages |
-| `local-extension` | Pub.dev ROHD; local hierarchy and DevTools-extension packages |
+| `local-rohd` | Local ROHD and hierarchy; hosted extension packages |
+| `local-extension` | Hosted ROHD; local hierarchy and extension packages |
 | `local-all` | Local ROHD, hierarchy, and DevTools-extension packages |
+
+Each convenience mode also replaces the persisted group-source state, so a
+later configuration task preserves the mode that was actually installed.
 
 The default local checkout is `~/release/rohd`. Configure all ROHD package
 sources from it with:
@@ -79,11 +86,12 @@ Use the central source selection in each task:
 - `Configure All Dependencies`
 
 Hosted completes immediately after the source selection. Git opens a terminal
-prompt prefilled with the current setting or
+prompt for the shared repository/ref, prefilled with the current setting or
 `github.com/intel/rohd:main`; enter the repository and branch/tag together as
-`repository:ref`. Local opens a terminal prompt prefilled with the current
-checkout path or `~/release/rohd`. The run tasks use the resulting
-configuration.
+`repository:ref`. Local opens a terminal prompt for the shared checkout root,
+prefilled with the current path or `~/release/rohd`. Changing either setting
+rewrites every override currently using that source while preserving each
+group's source selection. The run tasks use the resulting configuration.
 
 ## Make Targets
 
