@@ -331,6 +331,32 @@ void main() {
     expect(_instance(canvas, 'top/u1').isExpanded, isTrue);
   });
 
+  testWidgets('fromHierarchy applies an initial selected module', (
+    tester,
+  ) async {
+    final hierarchy = _buildHierarchy();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EmbeddedSchematicViewer.fromHierarchy(
+          externalHierarchy: hierarchy,
+          selectedModule: hierarchy.root.children.single,
+        ),
+      ),
+    );
+
+    final canvas = await _pumpUntilCanvas(
+      tester,
+      (candidate) {
+        final ids =
+            candidate.layout.instances.map((instance) => instance.id).toSet();
+        return ids.containsAll({'top/u1', 'top/u1/leaf'}) &&
+            !ids.contains('top');
+      },
+    );
+    expect(_instance(canvas, 'top/u1').isExpanded, isTrue);
+  });
+
   testWidgets(
     'fromHierarchy applies selection with expansion mode in one rebuild',
     (tester) async {

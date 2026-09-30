@@ -873,6 +873,12 @@ class _EmbeddedSchematicViewerState
     final loadGeneration = _beginLayoutLoad();
     final expansionMode = widget._effectiveExpansionMode;
 
+    if (widget.externalHierarchy != null &&
+        widget.selectedModule != null &&
+        !_hasPendingModule) {
+      _queueSelectedModuleForReload();
+    }
+
     debugPrint('[EmbeddedSchematicViewer] loadInitialSchematic() called');
     debugPrint('[EmbeddedSchematicViewer]   isVisible: ${widget.isVisible}');
     debugPrint(

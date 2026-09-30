@@ -128,10 +128,6 @@ dependencies:
       'rohd_devtools_widgets',
     );
     await writePackage(
-      'rohd_devtools_extension/packages/rohd_devtools_widgets',
-      'rohd_devtools_widgets',
-    );
-    await writePackage(
       'packages/rohd_source_navigator',
       'rohd_source_navigator',
     );
@@ -210,6 +206,26 @@ dependencies:
       ).readAsString();
       for (final source in entry.value.entries) {
         expect(modeState, contains('${source.key}=${source.value}\n'));
+      }
+      if (entry.value['rohd_devtools_widgets'] == 'local') {
+        final modeOverrides = await File(
+          '${sandbox.path}/pubspec_overrides.yaml',
+        ).readAsString();
+        expect(
+          modeOverrides,
+          contains(
+            '  rohd_devtools_widgets:\n'
+            '    path: ${rohdCheckout.path}/packages/rohd_devtools_widgets\n',
+          ),
+        );
+        expect(
+          modeOverrides,
+          isNot(
+            contains(
+              'rohd_devtools_extension/packages/rohd_devtools_widgets',
+            ),
+          ),
+        );
       }
     }
 

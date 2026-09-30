@@ -42,6 +42,8 @@ flutter:
   assets:
     # ELK layout engine JS files
     - assets/js/
+    # Dart-first ELK wrapper loaded by package consumers on web
+    - js_bridge/elk_layout_only.js
     - assets/gate_catalog.rohd.json
     - assets/rohd_schematic.json
     # Markdown help content

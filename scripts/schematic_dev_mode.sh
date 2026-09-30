@@ -133,6 +133,22 @@ resolve_rohd_path() {
   rohd_path="$(cd -- "$rohd_path" && pwd)"
 }
 
+resolve_widgets_path() {
+  local widgets_path="$rohd_path/packages/rohd_devtools_widgets"
+  if [[ ! -f "$widgets_path/pubspec.yaml" ]]; then
+    widgets_path="$rohd_path/rohd_devtools_extension/packages/rohd_devtools_widgets"
+  fi
+  printf '%s\n' "$widgets_path"
+}
+
+resolve_navigator_path() {
+  local navigator_path="$rohd_path/packages/rohd_source_navigator"
+  if [[ ! -f "$navigator_path/pubspec.yaml" ]]; then
+    navigator_path="$rohd_path/rohd_extension/dart"
+  fi
+  printf '%s\n' "$navigator_path"
+}
+
 ensure_local_rohd_packages() {
   local require_extension="$1"
   local missing=0
@@ -143,14 +159,10 @@ ensure_local_rohd_packages() {
   fi
 
   if [[ "$require_extension" == "yes" ]]; then
-    local widgets_path="$rohd_path/packages/rohd_devtools_widgets"
-    if [[ ! -f "$widgets_path/pubspec.yaml" ]]; then
-      widgets_path="$rohd_path/rohd_devtools_extension/packages/rohd_devtools_widgets"
-    fi
-    local navigator_path="$rohd_path/packages/rohd_source_navigator"
-    if [[ ! -f "$navigator_path/pubspec.yaml" ]]; then
-      navigator_path="$rohd_path/rohd_extension/dart"
-    fi
+    local widgets_path
+    local navigator_path
+    widgets_path="$(resolve_widgets_path)"
+    navigator_path="$(resolve_navigator_path)"
     for package_path in "$widgets_path/pubspec.yaml" \
       "$navigator_path/pubspec.yaml"; do
       if [[ ! -f "$package_path" ]]; then
@@ -331,10 +343,7 @@ YAML
             ;;
           local)
             resolve_rohd_path
-            widgets_path="$rohd_path/packages/rohd_devtools_widgets"
-            if [[ ! -f "$widgets_path/pubspec.yaml" ]]; then
-              widgets_path="$rohd_path/rohd_devtools_extension/packages/rohd_devtools_widgets"
-            fi
+            widgets_path="$(resolve_widgets_path)"
             [[ -f "$widgets_path/pubspec.yaml" ]] ||
               { echo "Missing local package: $widgets_path" >&2; exit 1; }
             printf '  rohd_devtools_widgets:\n    path: %s\n' \
@@ -353,10 +362,7 @@ YAML
             ;;
           local)
             resolve_rohd_path
-            navigator_path="$rohd_path/packages/rohd_source_navigator"
-            if [[ ! -f "$navigator_path/pubspec.yaml" ]]; then
-              navigator_path="$rohd_path/rohd_extension/dart"
-            fi
+            navigator_path="$(resolve_navigator_path)"
             [[ -f "$navigator_path/pubspec.yaml" ]] ||
               { echo "Missing local package: $navigator_path" >&2; exit 1; }
             printf '  rohd_source_navigator:\n    path: %s\n' \
@@ -574,13 +580,13 @@ YAML
   fi
 
   if [[ "$local_extension" == "yes" ]]; then
-    local navigator_path="$rohd_path/packages/rohd_source_navigator"
-    if [[ ! -f "$navigator_path/pubspec.yaml" ]]; then
-      navigator_path="$rohd_path/rohd_extension/dart"
-    fi
+    local widgets_path
+    local navigator_path
+    widgets_path="$(resolve_widgets_path)"
+    navigator_path="$(resolve_navigator_path)"
     cat >> "$overrides" <<YAML
   rohd_devtools_widgets:
-    path: $rohd_path/rohd_devtools_extension/packages/rohd_devtools_widgets
+    path: $widgets_path
   rohd_source_navigator:
     path: $navigator_path
 YAML

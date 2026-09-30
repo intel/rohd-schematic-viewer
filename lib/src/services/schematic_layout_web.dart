@@ -11,6 +11,7 @@ import 'dart:js_interop';
 
 import 'package:flutter/foundation.dart';
 import 'package:rohd_schematic_viewer/src/services/elk_layout_extractor.dart';
+import 'package:rohd_schematic_viewer/src/services/elk_layout_web_loader.dart';
 import 'package:rohd_schematic_viewer/src/services/schematic_js_interop.dart';
 import 'package:rohd_schematic_viewer/src/services/schematic_layout_engine.dart';
 
@@ -52,6 +53,8 @@ class SchematicLayoutEngineWeb implements SchematicLayoutEngine {
     String? sessionId,
   }) async {
     try {
+      await ensureElkLayoutOnlyLoaded();
+
       // Use the standalone ElkLayoutOnly function (from elk_layout_only.js)
       final fn = elkLayoutOnlyFn;
       if (fn == null) {

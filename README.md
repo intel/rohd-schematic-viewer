@@ -52,6 +52,10 @@ EmbeddedSchematicViewer.fromJson(
 )
 ```
 
+On Flutter web, the viewer loads its declared package-owned ELK assets on the
+first layout request. Host applications do not need to copy scripts or modify
+their `web/index.html`.
+
 `themeMode` and `expansionMode` are controlled properties: updates from the
 host application are applied without replacing the widget. The
 `initialThemeMode` and `initialExpansionMode` parameters remain available for
