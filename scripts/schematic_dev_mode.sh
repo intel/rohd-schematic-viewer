@@ -46,11 +46,6 @@ dependency_constraint() {
   ' pubspec.yaml
 }
 
-rohd_hosted_constraint="${ROHD_HOSTED_CONSTRAINT:-$(dependency_constraint rohd)}"
-hierarchy_hosted_constraint="${ROHD_HIERARCHY_HOSTED_CONSTRAINT:-$(dependency_constraint rohd_hierarchy)}"
-widgets_hosted_constraint="${ROHD_WIDGETS_HOSTED_CONSTRAINT:-$(dependency_constraint rohd_devtools_widgets)}"
-navigator_hosted_constraint="${ROHD_NAVIGATOR_HOSTED_CONSTRAINT:-$(dependency_constraint rohd_source_navigator)}"
-
 for dependency in rohd rohd_hierarchy rohd_devtools_widgets rohd_source_navigator; do
   if [[ -z "$(dependency_constraint "$dependency")" ]]; then
     echo "Could not find $dependency in pubspec.yaml." >&2
@@ -89,8 +84,7 @@ configuring one group updates every other group that uses that source, without
 changing the other groups' hosted/git/local selections.
 
 Git sources default to the main branch. Set ROHD_GIT_REF to use another branch
-or tag. Hosted constraints are read from pubspec.yaml and can be overridden
-with the package-specific ROHD_*_HOSTED_CONSTRAINT variables.
+or tag.
 
 Set SCHEMATIC_PROMPT_SOURCE_VALUE=1 with configure-group to prompt for a Git
 repository:ref or Local checkout path. Set ROHD_SOURCE_VALUE to provide the

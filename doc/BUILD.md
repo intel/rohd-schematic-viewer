@@ -6,22 +6,15 @@ This document is the source of truth for building, running, packaging, and switc
 
 - Flutter SDK compatible with `environment.sdk` in `pubspec.yaml`.
 - `bash`, `make`, `git`, and `node` on `PATH`.
-- Linux desktop builds also need CMake, Ninja, `pkg-config`, GTK development
-  files, and a C++ compiler. On Ubuntu/Debian:
+- Linux desktop builds also need CMake, Ninja, `pkg-config`, GTK development files, and a C++ compiler. On Ubuntu/Debian:
 
 ```bash
 sudo apt-get install cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
 ```
 
-Clang is Flutter's preferred Linux compiler. When `clang` and `clang++` are not
-available but `gcc` and `g++` are, the Make targets automatically provide the
-compiler command names Flutter expects and build with GCC instead. This avoids
-installing Clang solely to satisfy Flutter's name-based toolchain check.
+Clang is Flutter's preferred Linux compiler. When `clang` and `clang++` are not available but `gcc` and `g++` are, the Make targets automatically provide the compiler command names Flutter expects and build with GCC instead. This avoids installing Clang solely to satisfy Flutter's name-based toolchain check.
 
-The Linux build uses CMake and `pkg-config`, and
-[linux/CMakeLists.txt](../linux/CMakeLists.txt) requires `gtk+-3.0`.
-`scripts/stage_linux_assets.sh` validates bundled assets for Linux builds; it
-does not install system dependencies.
+The Linux build uses CMake and `pkg-config`, and [linux/CMakeLists.txt](../linux/CMakeLists.txt) requires `gtk+-3.0`. `scripts/stage_linux_assets.sh` validates bundled assets for Linux builds; it does not install system dependencies.
 
 Check your local Flutter installation with:
 

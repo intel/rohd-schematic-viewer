@@ -270,10 +270,10 @@ void main() {
     );
   });
 
-  test('matches child signal scope with an external hierarchy', () {
+  test('matches a child scope with an instance-named external root', () {
     final externalHierarchy = BaseHierarchyAdapter.fromTree(
       HierarchyOccurrence(
-        name: 'Top',
+        name: 'dut',
         definition: 'Top',
         signals: [
           SignalOccurrence(
@@ -327,10 +327,14 @@ void main() {
         .singleWhere((signal) => signal.name == 'a');
 
     final endpoints = externalConnectivity.fanout(childInput);
+    final inverterEndpoint = endpoints.singleWhere(
+      (endpoint) => endpoint.nodePath == 'dut/u1/inverter',
+    );
 
+    expect(inverterEndpoint.nodeAddress, isNotNull);
     expect(
-      endpoints.map((endpoint) => endpoint.nodePath),
-      contains('Top/u1/inverter'),
+      inverterEndpoint.nodeAddress,
+      externalHierarchy.root.children.single.children.single.address,
     );
   });
 

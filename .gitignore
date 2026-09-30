@@ -22,6 +22,7 @@ linux/flutter/generated_plugin_registrant.h
 linux/flutter/generated_plugins.cmake
 
 # Generated and ephemeral files
+assets/elk_layout_only.js
 .flutter-plugins
 .flutter-plugins-dependencies
 .fvm/

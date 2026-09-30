@@ -69,14 +69,21 @@ class SchematicPortOccurrence {
 class NetlistSchematicConnectivity {
   NetlistSchematicConnectivity._(NetlistSchematicAdapter adapter)
       : _adapter = adapter,
-        _hyperedgeIndex = _buildHyperedgeIndex(adapter.schematic.hyperedges),
-        _hyperedgeScopePaths = _buildHyperedgeScopePaths(
+        _hyperedgeIndex = _buildHyperedgeIndex(adapter.schematic.hyperedges) {
+    _canonicalNodePaths = _buildCanonicalNodePaths(
+      adapter.schematic.nodeMap.values,
+      adapter.hierarchy,
+    );
+    _hyperedgeScopePaths = _buildHyperedgeScopePaths(
           adapter.schematic.nodeMap.values,
+          _canonicalNodePaths,
         );
+  }
 
   final NetlistSchematicAdapter _adapter;
   final _HyperedgeIndex _hyperedgeIndex;
-  final Map<LayoutHyperedge, String> _hyperedgeScopePaths;
+  late final Map<String, String> _canonicalNodePaths;
+  late final Map<LayoutHyperedge, String> _hyperedgeScopePaths;
 
   /// Parses [netlistJson] into a read-only connectivity model.
   factory NetlistSchematicConnectivity.fromJson(
@@ -191,6 +198,7 @@ class NetlistSchematicConnectivity {
 
   static Map<LayoutHyperedge, String> _buildHyperedgeScopePaths(
     Iterable<LayoutNode> nodes,
+    Map<String, String> canonicalNodePaths,
   ) {
     final scopePaths = <LayoutHyperedge, String>{};
 
@@ -199,13 +207,53 @@ class NetlistSchematicConnectivity {
       if (hyperedges == null) {
         continue;
       }
-      final scopePath = node.hierarchyNodeId ?? node.occurrence.path();
+      final scopePath =
+          canonicalNodePaths[node.id] ?? _adapterNodePath(node);
       for (final hyperedge in hyperedges) {
         scopePaths[hyperedge] = scopePath;
       }
     }
 
     return scopePaths;
+  }
+
+  static Map<String, String> _buildCanonicalNodePaths(
+    Iterable<LayoutNode> nodes,
+    HierarchyService hierarchy,
+  ) {
+    final paths = <String, String>{};
+    for (final node in nodes) {
+      final adapterPath = _adapterNodePath(node);
+      final occurrence =
+          hierarchy.occurrenceByPathname(adapterPath) ??
+          _occurrenceForAdapterPath(hierarchy.root, adapterPath);
+      paths[node.id] = occurrence?.path() ?? adapterPath;
+    }
+    return paths;
+  }
+
+  static String _adapterNodePath(LayoutNode node) =>
+      node.hierarchyNodeId ?? node.occurrence.path();
+
+  static HierarchyOccurrence? _occurrenceForAdapterPath(
+    HierarchyOccurrence root,
+    String adapterPath,
+  ) {
+    final segments = adapterPath.split('/');
+    if (segments.isEmpty ||
+        (root.name != segments.first && root.definition != segments.first)) {
+      return null;
+    }
+
+    var occurrence = root;
+    for (final segment in segments.skip(1)) {
+      final index = occurrence.childIndexByName(segment);
+      if (index < 0) {
+        return null;
+      }
+      occurrence = occurrence.children[index];
+    }
+    return occurrence;
   }
 
   List<SchematicPortOccurrence> _describeEndpoints(
@@ -219,7 +267,7 @@ class NetlistSchematicConnectivity {
       ];
 
   SchematicPortOccurrence _endpoint(LayoutNode node, ElkPort port) {
-    final nodePath = node.hierarchyNodeId ?? node.occurrence.path();
+    final nodePath = _canonicalNodePaths[node.id] ?? _adapterNodePath(node);
     return SchematicPortOccurrence(
       nodePath: nodePath,
       nodeAddress:

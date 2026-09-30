@@ -7,6 +7,7 @@
 // 2026 September 29
 // Author: Desmond Kirkpatrick <desmond.a.kirkpatrick@intel.com>
 
+import 'dart:async' show Completer;
 import 'dart:convert' show utf8;
 import 'dart:typed_data' show ByteData, Uint8List;
 
@@ -29,6 +30,32 @@ HierarchyService _buildHierarchy() => BaseHierarchyAdapter.fromTree(
             definition: 'Middle',
             children: [
               HierarchyOccurrence(name: 'leaf', definition: 'Leaf'),
+            ],
+          ),
+        ],
+      ),
+    );
+
+HierarchyService _buildSelectionHierarchy() => BaseHierarchyAdapter.fromTree(
+      HierarchyOccurrence(
+        name: 'top',
+        definition: 'Top',
+        children: [
+          HierarchyOccurrence(
+            name: 'u1',
+            definition: 'First',
+            children: [
+              HierarchyOccurrence(name: 'firstLeaf', definition: 'FirstLeaf'),
+            ],
+          ),
+          HierarchyOccurrence(
+            name: 'u2',
+            definition: 'Second',
+            children: [
+              HierarchyOccurrence(
+                name: 'secondLeaf',
+                definition: 'SecondLeaf',
+              ),
             ],
           ),
         ],
@@ -69,8 +96,22 @@ Future<void> _pumpUntilText(WidgetTester tester, String text) async {
   fail('Timed out waiting for text containing "$text".');
 }
 
+Future<void> _pumpUntil(
+  WidgetTester tester,
+  bool Function() matches,
+  String description,
+) async {
+  for (var attempt = 0; attempt < 50; attempt++) {
+    await tester.pump(const Duration(milliseconds: 10));
+    if (matches()) {
+      return;
+    }
+  }
+  fail('Timed out waiting for $description.');
+}
+
 void main() {
-  testWidgets('reloads when the asset path changes with the same key', (
+  testWidgets('reloads a changed asset path after becoming visible', (
     tester,
   ) async {
     final messenger =
@@ -93,6 +134,7 @@ void main() {
 
     const viewerKey = ValueKey('asset-viewer');
     var assetPath = 'assets/first-schematic.json';
+    var isVisible = true;
     late StateSetter updateParent;
 
     await tester.pumpWidget(
@@ -103,6 +145,7 @@ void main() {
             return EmbeddedSchematicViewer.fromAsset(
               key: viewerKey,
               assetPath: assetPath,
+              isVisible: isVisible,
             );
           },
         ),
@@ -110,13 +153,100 @@ void main() {
     );
     await _pumpUntilText(tester, 'Unexpected character');
 
+    updateParent(() => isVisible = false);
+    await tester.pump();
+
     updateParent(() {
       assetPath = 'assets/second-schematic.json';
     });
+    await tester.pump();
+
+    updateParent(() => isVisible = true);
     await _pumpUntilText(tester, 'Unexpected end of input');
 
     expect(find.textContaining('Unexpected character'), findsNothing);
   });
+
+  testWidgets('ignores a stale module fetch after a newer selection', (
+    tester,
+  ) async {
+    final hierarchy = _buildSelectionHierarchy();
+    final firstFetch = Completer<Map<String, dynamic>?>();
+    final requestedDefinitions = <String>[];
+    HierarchyOccurrence? selectedModule;
+    late StateSetter updateParent;
+
+    Future<Map<String, dynamic>?> fetchModule(String definition) {
+      requestedDefinitions.add(definition);
+      if (definition == 'First') {
+        return firstFetch.future;
+      }
+      if (definition == 'Second') {
+        return Future<Map<String, dynamic>?>.value();
+      }
+      fail('Unexpected module fetch: $definition');
+    }
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            updateParent = setState;
+            return EmbeddedSchematicViewer.fromHierarchy(
+              externalHierarchy: hierarchy,
+              selectedModule: selectedModule,
+              fetchModuleNetlist: fetchModule,
+            );
+          },
+        ),
+      ),
+    );
+    await _pumpUntilCanvas(
+      tester,
+      (canvas) => canvas.layout.instances.any(
+        (instance) => instance.id == 'top/u1',
+      ),
+    );
+
+    updateParent(() => selectedModule = hierarchy.root.children[0]);
+    await _pumpUntil(
+      tester,
+      () => requestedDefinitions.contains('First'),
+      'the first module fetch',
+    );
+
+    updateParent(() => selectedModule = hierarchy.root.children[1]);
+    final newestCanvas = await _pumpUntilCanvas(
+      tester,
+      (canvas) {
+        final ids = canvas.layout.instances.map((instance) => instance.id);
+        return ids.contains('top/u2') && ids.contains('top/u2/secondLeaf');
+      },
+    );
+    expect(
+      newestCanvas.layout.instances.map((instance) => instance.id),
+      isNot(contains('top/u1')),
+    );
+
+    // A stale extraction would surface this malformed module as an error.
+    firstFetch.complete(<String, dynamic>{
+      'First': <String, dynamic>{'ports': 'not-a-map'},
+    });
+    for (var attempt = 0; attempt < 5; attempt++) {
+      await tester.pump(const Duration(milliseconds: 10));
+    }
+
+    final survivingCanvas = tester.widget<SchematicCanvas>(
+      find.byType(SchematicCanvas),
+    );
+    expect(
+      survivingCanvas.layout.instances.map((instance) => instance.id),
+      containsAll(<String>['top/u2', 'top/u2/secondLeaf']),
+    );
+    expect(find.text('Error'), findsNothing);
+    expect(requestedDefinitions, orderedEquals(<String>['First', 'Second']));
+  });
+
   test('hierarchy synthesizer can collapse its target root', () {
     final synthesizer = HierarchySchematicSynthesizer(_buildHierarchy());
 
