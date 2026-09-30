@@ -197,6 +197,37 @@ const _aliasNetlist = r'''
 }
 ''';
 
+const _twoBitNetlist = r'''
+{
+  "modules": {
+    "Top": {
+      "attributes": {"top": 1},
+      "ports": {
+        "a": {"direction": "input", "bits": [1, 2]},
+        "y": {"direction": "output", "bits": [3, 4]}
+      },
+      "cells": {
+        "buffer": {
+          "type": "$_BUF_",
+          "port_directions": {
+            "A": "input",
+            "Y": "output"
+          },
+          "connections": {
+            "A": [1, 2],
+            "Y": [3, 4]
+          }
+        }
+      },
+      "netnames": {
+        "a": {"bits": [1, 2]},
+        "y": {"bits": [3, 4]}
+      }
+    }
+  }
+}
+''';
+
 void main() {
   late NetlistSchematicConnectivity connectivity;
 
@@ -253,6 +284,26 @@ void main() {
     expect(endpoints, hasLength(1));
     expect(endpoints.single.direction.toLowerCase(), 'output');
     expect(endpoints.single.nodePath, isNot(contains('inverter')));
+  });
+
+  test('deduplicates opaque endpoints for multi-bit signals', () {
+    final busConnectivity = NetlistSchematicConnectivity.fromJson(
+      _twoBitNetlist,
+    );
+    final input = busConnectivity.hierarchy.root.signals.singleWhere(
+      (signal) => signal.name == 'a',
+    );
+    final output = busConnectivity.hierarchy.root.signals.singleWhere(
+      (signal) => signal.name == 'y',
+    );
+
+    final consumers = busConnectivity.fanout(input);
+    final drivers = busConnectivity.fanin(output);
+
+    expect(consumers, hasLength(1));
+    expect(drivers, hasLength(1));
+    expect(consumers.single.nodePath, endsWith('/buffer'));
+    expect(drivers.single.nodePath, endsWith('/buffer'));
   });
 
   test('uses canonical endpoint paths with an external hierarchy', () {

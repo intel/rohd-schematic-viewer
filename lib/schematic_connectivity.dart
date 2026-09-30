@@ -133,13 +133,18 @@ class NetlistSchematicConnectivity {
   }) {
     final schematic = _adapter.schematic;
     final initialEndpoints = <(String, int)>[];
+    final seenEndpoints = <(String, int)>{};
     for (final hyperedge in schematic.hyperedges) {
       if (!_matchesSignal(signal, hyperedge) ||
           !_matchesScope(signal, hyperedge)) {
         continue;
       }
       final pairs = includeSources ? hyperedge.sources : hyperedge.targets;
-      initialEndpoints.addAll(pairs);
+      for (final pair in pairs) {
+        if (seenEndpoints.add(pair)) {
+          initialEndpoints.add(pair);
+        }
+      }
     }
     if (mode == SchematicTraversalMode.transparent) {
       return _transparentEndpoints(
