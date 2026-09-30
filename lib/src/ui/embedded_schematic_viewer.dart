@@ -1541,8 +1541,7 @@ class _EmbeddedSchematicViewerState
       );
       _themeCubit.setTheme(controlledThemeMode);
     }
-    final expansionModeChanged =
-        widget.expansionMode != null &&
+    final expansionModeChanged = widget.expansionMode != null &&
         widget.expansionMode != oldWidget.expansionMode;
     final selectedModuleChanged =
         widget.selectedModule != oldWidget.selectedModule;
