@@ -75,9 +75,9 @@ class NetlistSchematicConnectivity {
       adapter.hierarchy,
     );
     _hyperedgeScopePaths = _buildHyperedgeScopePaths(
-          adapter.schematic.nodeMap.values,
-          _canonicalNodePaths,
-        );
+      adapter.schematic.nodeMap.values,
+      _canonicalNodePaths,
+    );
   }
 
   final NetlistSchematicAdapter _adapter;
@@ -207,8 +207,7 @@ class NetlistSchematicConnectivity {
       if (hyperedges == null) {
         continue;
       }
-      final scopePath =
-          canonicalNodePaths[node.id] ?? _adapterNodePath(node);
+      final scopePath = canonicalNodePaths[node.id] ?? _adapterNodePath(node);
       for (final hyperedge in hyperedges) {
         scopePaths[hyperedge] = scopePath;
       }
@@ -224,8 +223,7 @@ class NetlistSchematicConnectivity {
     final paths = <String, String>{};
     for (final node in nodes) {
       final adapterPath = _adapterNodePath(node);
-      final occurrence =
-          hierarchy.occurrenceByPathname(adapterPath) ??
+      final occurrence = hierarchy.occurrenceByPathname(adapterPath) ??
           _occurrenceForAdapterPath(hierarchy.root, adapterPath);
       paths[node.id] = occurrence?.path() ?? adapterPath;
     }
