@@ -11,9 +11,11 @@ import 'dart:async' show Completer;
 import 'dart:convert' show utf8;
 import 'dart:typed_data' show ByteData, Uint8List;
 
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:rohd_hierarchy/rohd_hierarchy.dart';
+import 'package:rohd_schematic_viewer/src/cubit/schematic_theme_cubit.dart';
 import 'package:rohd_schematic_viewer/src/schematic/schematic_canvas.dart';
 import 'package:rohd_schematic_viewer/src/services/hierarchy_schematic_synthesizer.dart';
 import 'package:rohd_schematic_viewer/src/services/schematic_layout_models.dart';
@@ -67,6 +69,10 @@ SchematicInstanceData _instance(
   String id,
 ) =>
     canvas.layout.instances.singleWhere((instance) => instance.id == id);
+
+SchematicThemeCubit _themeCubit(WidgetTester tester) => BlocProvider.of(
+      tester.element(find.byType(SchematicCanvas)),
+    );
 
 Future<SchematicCanvas> _pumpUntilCanvas(
   WidgetTester tester,
@@ -165,6 +171,169 @@ void main() {
     await _pumpUntilText(tester, 'Unexpected end of input');
 
     expect(find.textContaining('Unexpected character'), findsNothing);
+  });
+
+  testWidgets('superseding a map load permits later module selection', (
+    tester,
+  ) async {
+    final hierarchy = _buildHierarchy();
+    final pendingTopFetch = Completer<Map<String, dynamic>?>();
+    var fetchCount = 0;
+    Map<String, dynamic>? netlistJsonMap = <String, dynamic>{
+      'modules': {
+        'Top': {
+          'attributes': {'top': 1},
+          'ports': <String, dynamic>{},
+          'netnames': <String, dynamic>{},
+          'cells': {
+            'u1': {'type': 'Middle'},
+          },
+        },
+      },
+    };
+    HierarchyOccurrence? selectedModule;
+    late StateSetter updateParent;
+
+    Future<Map<String, dynamic>?> fetchModule(String _) {
+      fetchCount++;
+      return fetchCount == 1
+          ? pendingTopFetch.future
+          : Future<Map<String, dynamic>?>.value();
+    }
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            updateParent = setState;
+            return EmbeddedSchematicViewer.fromHierarchy(
+              externalHierarchy: hierarchy,
+              netlistJsonMap: netlistJsonMap,
+              selectedModule: selectedModule,
+              fetchModuleNetlist: fetchModule,
+            );
+          },
+        ),
+      ),
+    );
+    await _pumpUntil(
+      tester,
+      () => fetchCount == 1,
+      'the initial map-backed fetch',
+    );
+
+    updateParent(() => netlistJsonMap = null);
+    await _pumpUntilCanvas(
+      tester,
+      (canvas) => canvas.layout.instances.length == 2,
+    );
+
+    updateParent(() => selectedModule = hierarchy.root.children.single);
+    final selectedCanvas = await _pumpUntilCanvas(
+      tester,
+      (canvas) {
+        final ids = canvas.layout.instances.map((instance) => instance.id);
+        return ids.contains('top/u1') && ids.contains('top/u1/leaf');
+      },
+    );
+    expect(
+      selectedCanvas.layout.instances.map((instance) => instance.id),
+      isNot(contains('top')),
+    );
+
+    pendingTopFetch.complete();
+    await tester.pump();
+  });
+
+  testWidgets('keeps theme state when uncontrolled values change', (
+    tester,
+  ) async {
+    final hierarchy = _buildHierarchy();
+    var initialThemeMode = SchematicThemeMode.dark;
+    SchematicThemeMode? themeMode;
+    late StateSetter updateParent;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            updateParent = setState;
+            return EmbeddedSchematicViewer.fromHierarchy(
+              externalHierarchy: hierarchy,
+              initialThemeMode: initialThemeMode,
+              themeMode: themeMode,
+            );
+          },
+        ),
+      ),
+    );
+    await _pumpUntilCanvas(
+      tester,
+      (canvas) => canvas.layout.instances.isNotEmpty,
+    );
+    expect(_themeCubit(tester).state, SchematicThemeMode.dark);
+
+    updateParent(() => initialThemeMode = SchematicThemeMode.light);
+    await tester.pump();
+    expect(_themeCubit(tester).state, SchematicThemeMode.dark);
+
+    updateParent(() => themeMode = SchematicThemeMode.light);
+    await tester.pump();
+    expect(_themeCubit(tester).state, SchematicThemeMode.light);
+
+    updateParent(() => initialThemeMode = SchematicThemeMode.dark);
+    await tester.pump();
+    updateParent(() => themeMode = null);
+    await tester.pump();
+    expect(_themeCubit(tester).state, SchematicThemeMode.light);
+  });
+
+  testWidgets('keeps expansion state when uncontrolled values change', (
+    tester,
+  ) async {
+    final hierarchy = _buildHierarchy();
+    var initialMode = SchematicExpansionMode.collapsed;
+    SchematicExpansionMode? expansionMode;
+    late StateSetter updateParent;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            updateParent = setState;
+            return EmbeddedSchematicViewer.fromHierarchy(
+              externalHierarchy: hierarchy,
+              initialExpansionMode: initialMode,
+              expansionMode: expansionMode,
+            );
+          },
+        ),
+      ),
+    );
+    var canvas = await _pumpUntilCanvas(
+      tester,
+      (candidate) => candidate.layout.instances.length == 1,
+    );
+    final collapsedLayout = canvas.layout;
+
+    updateParent(() => initialMode = SchematicExpansionMode.fullyExpanded);
+    await tester.pump(const Duration(milliseconds: 20));
+    canvas = tester.widget<SchematicCanvas>(find.byType(SchematicCanvas));
+    expect(identical(canvas.layout, collapsedLayout), isTrue);
+
+    updateParent(() => expansionMode = SchematicExpansionMode.defaultView);
+    canvas = await _pumpUntilCanvas(
+      tester,
+      (candidate) => candidate.layout.instances.length == 2,
+    );
+    final controlledLayout = canvas.layout;
+
+    updateParent(() => initialMode = SchematicExpansionMode.collapsed);
+    await tester.pump(const Duration(milliseconds: 20));
+    updateParent(() => expansionMode = null);
+    await tester.pump(const Duration(milliseconds: 20));
+    canvas = tester.widget<SchematicCanvas>(find.byType(SchematicCanvas));
+    expect(identical(canvas.layout, controlledLayout), isTrue);
   });
 
   testWidgets('ignores a stale module fetch after a newer selection', (

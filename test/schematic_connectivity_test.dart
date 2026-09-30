@@ -164,6 +164,39 @@ const _nestedSameNameNetlist = r'''
 }
 ''';
 
+const _aliasNetlist = r'''
+{
+  "modules": {
+    "Top": {
+      "attributes": {"top": 1},
+      "ports": {
+        "input_alias": {"direction": "input", "bits": [1]},
+        "y": {"direction": "output", "bits": [2]}
+      },
+      "cells": {
+        "inverter": {
+          "type": "$_NOT_",
+          "port_directions": {
+            "A": "input",
+            "Y": "output"
+          },
+          "connections": {
+            "A": [1],
+            "Y": [2]
+          }
+        }
+      },
+      "netnames": {
+        "first_alias": {"bits": [1]},
+        "input_alias": {"bits": [1]},
+        "later_alias": {"bits": [1]},
+        "y": {"bits": [2]}
+      }
+    }
+  }
+}
+''';
+
 void main() {
   late NetlistSchematicConnectivity connectivity;
 
@@ -411,6 +444,28 @@ void main() {
       consumers.map((endpoint) => endpoint.nodePath),
       orderedEquals(['Top/u1/second']),
     );
+  });
+
+  test('resolves port and later netname aliases sharing a Yosys bit', () {
+    final aliasConnectivity = NetlistSchematicConnectivity.fromJson(
+      _aliasNetlist,
+    );
+    final signals = aliasConnectivity.hierarchy.root.signals;
+    final aliases = [
+      signals.singleWhere((signal) => signal.name == 'input_alias'),
+      signals.singleWhere((signal) => signal.name == 'later_alias'),
+    ];
+
+    for (final alias in aliases) {
+      expect(
+        aliasConnectivity.fanin(alias).map((endpoint) => endpoint.nodePath),
+        orderedEquals(['Top']),
+      );
+      expect(
+        aliasConnectivity.fanout(alias).map((endpoint) => endpoint.nodePath),
+        orderedEquals(['Top/inverter']),
+      );
+    }
   });
 }
 

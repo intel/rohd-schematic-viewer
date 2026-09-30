@@ -551,14 +551,16 @@ class _EmbeddedSchematicViewerState
   // results are committed only when their generation is still current.
   int _layoutLoadGeneration = 0;
 
-  int _beginLayoutLoad() => ++_layoutLoadGeneration;
+  int _beginLayoutLoad() {
+    _initialLoadInProgress = false;
+    return ++_layoutLoadGeneration;
+  }
 
   bool _isCurrentLayoutLoad(int generation) =>
       mounted && generation == _layoutLoadGeneration;
 
   void _invalidateLayoutLoads() {
-    _layoutLoadGeneration++;
-    _initialLoadInProgress = false;
+    _beginLayoutLoad();
   }
 
   void _queueSelectedModuleForReload() {
@@ -1531,15 +1533,17 @@ class _EmbeddedSchematicViewerState
       '${widget.schematicJson != null ? 'present' : 'null'}',
     );
 
-    final themeMode = widget._effectiveThemeMode;
-    if (themeMode != oldWidget._effectiveThemeMode) {
+    final controlledThemeMode = widget.themeMode;
+    if (controlledThemeMode != null &&
+        controlledThemeMode != oldWidget.themeMode) {
       debugPrint(
         '[EmbeddedSchematicViewer] Theme mode changed, updating cubit',
       );
-      _themeCubit.setTheme(themeMode ?? SchematicThemeMode.dark);
+      _themeCubit.setTheme(controlledThemeMode);
     }
     final expansionModeChanged =
-        widget._effectiveExpansionMode != oldWidget._effectiveExpansionMode;
+        widget.expansionMode != null &&
+        widget.expansionMode != oldWidget.expansionMode;
     final selectedModuleChanged =
         widget.selectedModule != oldWidget.selectedModule;
 

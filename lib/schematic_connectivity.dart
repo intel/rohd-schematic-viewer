@@ -11,6 +11,7 @@
 library;
 
 import 'dart:collection' show ListQueue;
+import 'dart:convert' show jsonDecode;
 
 import 'package:rohd_hierarchy/rohd_hierarchy.dart';
 import 'package:rohd_schematic_viewer/src/schematic/netlist_schematic_adapter.dart';
@@ -67,8 +68,10 @@ class SchematicPortOccurrence {
 /// This facade intentionally hides the mutable layout graph and adapter used
 /// by the interactive viewer.
 class NetlistSchematicConnectivity {
-  NetlistSchematicConnectivity._(NetlistSchematicAdapter adapter)
-      : _adapter = adapter,
+  NetlistSchematicConnectivity._(
+    NetlistSchematicAdapter adapter,
+    Map<String, Map<String, Set<int>>> signalBitsByModule,
+  )   : _adapter = adapter,
         _hyperedgeIndex = _buildHyperedgeIndex(adapter.schematic.hyperedges) {
     _canonicalNodePaths = _buildCanonicalNodePaths(
       adapter.schematic.nodeMap.values,
@@ -78,24 +81,33 @@ class NetlistSchematicConnectivity {
       adapter.schematic.nodeMap.values,
       _canonicalNodePaths,
     );
+    _signalBitsByScope = _buildSignalBitsByScope(
+      adapter.schematic.nodeMap.values,
+      _canonicalNodePaths,
+      signalBitsByModule,
+    );
   }
 
   final NetlistSchematicAdapter _adapter;
   final _HyperedgeIndex _hyperedgeIndex;
   late final Map<String, String> _canonicalNodePaths;
   late final Map<LayoutHyperedge, String> _hyperedgeScopePaths;
+  late final Map<String, Map<String, Set<int>>> _signalBitsByScope;
 
   /// Parses [netlistJson] into a read-only connectivity model.
   factory NetlistSchematicConnectivity.fromJson(
     String netlistJson, {
     HierarchyService? externalHierarchy,
-  }) =>
-      NetlistSchematicConnectivity._(
-        NetlistSchematicAdapter.fromJson(
-          netlistJson,
-          externalHierarchy: externalHierarchy,
-        ),
-      );
+  }) {
+    final adapter = NetlistSchematicAdapter.fromJson(
+      netlistJson,
+      externalHierarchy: externalHierarchy,
+    );
+    return NetlistSchematicConnectivity._(
+      adapter,
+      _buildSignalBitsByModule(netlistJson),
+    );
+  }
 
   /// Hierarchy used to resolve signal paths and addresses.
   HierarchyService get hierarchy => _adapter.hierarchy;
@@ -122,7 +134,7 @@ class NetlistSchematicConnectivity {
     final schematic = _adapter.schematic;
     final initialEndpoints = <(String, int)>[];
     for (final hyperedge in schematic.hyperedges) {
-      if (!_matchesSignal(signal, hyperedge.signal) ||
+      if (!_matchesSignal(signal, hyperedge) ||
           !_matchesScope(signal, hyperedge)) {
         continue;
       }
@@ -216,6 +228,54 @@ class NetlistSchematicConnectivity {
     return scopePaths;
   }
 
+  static Map<String, Map<String, Set<int>>> _buildSignalBitsByModule(
+    String netlistJson,
+  ) {
+    final netlist = jsonDecode(netlistJson) as Map<String, dynamic>;
+    final modules = netlist['modules'] as Map<String, dynamic>? ??
+        const <String, dynamic>{};
+    final signalBitsByModule = <String, Map<String, Set<int>>>{};
+
+    for (final entry in modules.entries) {
+      final module = entry.value as Map<String, dynamic>;
+      final signalBits = <String, Set<int>>{};
+      for (final tableName in const ['ports', 'netnames']) {
+        final signals = module[tableName] as Map? ?? const <String, dynamic>{};
+        for (final signal in signals.entries) {
+          final bits = ((signal.value as Map?)?['bits'] as List? ?? const [])
+              .whereType<int>();
+          signalBits
+              .putIfAbsent(signal.key.toString(), () => <int>{})
+              .addAll(bits);
+        }
+      }
+      signalBitsByModule[entry.key] = signalBits;
+    }
+
+    return signalBitsByModule;
+  }
+
+  static Map<String, Map<String, Set<int>>> _buildSignalBitsByScope(
+    Iterable<LayoutNode> nodes,
+    Map<String, String> canonicalNodePaths,
+    Map<String, Map<String, Set<int>>> signalBitsByModule,
+  ) {
+    final signalBitsByScope = <String, Map<String, Set<int>>>{};
+
+    for (final node in nodes) {
+      final definitionName = node.hwMeta.extra?['definitionName']?.toString() ??
+          node.occurrence.definition;
+      final signalBits = signalBitsByModule[definitionName];
+      if (signalBits == null) {
+        continue;
+      }
+      final scopePath = canonicalNodePaths[node.id] ?? _adapterNodePath(node);
+      signalBitsByScope[scopePath] = signalBits;
+    }
+
+    return signalBitsByScope;
+  }
+
   static Map<String, String> _buildCanonicalNodePaths(
     Iterable<LayoutNode> nodes,
     HierarchyService hierarchy,
@@ -275,10 +335,11 @@ class NetlistSchematicConnectivity {
     );
   }
 
-  static bool _matchesSignal(
+  bool _matchesSignal(
     SignalOccurrence signal,
-    SignalOccurrence other,
+    LayoutHyperedge hyperedge,
   ) {
+    final other = hyperedge.signal;
     if (identical(signal, other)) {
       return true;
     }
@@ -291,7 +352,8 @@ class NetlistSchematicConnectivity {
     return signal.path() == otherPath ||
         (otherAddress == null &&
             otherPath == other.name &&
-            signal.name == other.name);
+            signal.name == other.name) ||
+        _sharesUnderlyingBit(signal, hyperedge);
   }
 
   bool _matchesScope(
@@ -302,14 +364,32 @@ class NetlistSchematicConnectivity {
         hyperedge.signal.path() != hyperedge.signal.name) {
       return true;
     }
-    if (signal.name != hyperedge.signal.name) {
-      return false;
-    }
 
     final scopePath = signal.parent?.path();
     if (scopePath == null) {
-      return true;
+      return signal.name == hyperedge.signal.name;
     }
-    return _hyperedgeScopePaths[hyperedge] == scopePath;
+    if (_hyperedgeScopePaths[hyperedge] != scopePath) {
+      return false;
+    }
+    return signal.name == hyperedge.signal.name ||
+        _sharesUnderlyingBit(signal, hyperedge);
+  }
+
+  bool _sharesUnderlyingBit(
+    SignalOccurrence signal,
+    LayoutHyperedge hyperedge,
+  ) {
+    final scopePath = signal.parent?.path();
+    if (scopePath == null || _hyperedgeScopePaths[hyperedge] != scopePath) {
+      return false;
+    }
+
+    final signalBits = _signalBitsByScope[scopePath]?[signal.name];
+    final hyperedgeBits = _signalBitsByScope[scopePath]?[hyperedge.signal.name];
+    if (signalBits == null || hyperedgeBits == null) {
+      return false;
+    }
+    return signalBits.any(hyperedgeBits.contains);
   }
 }

@@ -13,6 +13,5 @@ library;
 export 'schematic_layout.dart';
 export 'src/ui/flutter_schematic_viewer_page.dart'
     show FlutterSchematicExtensionHost, FlutterSchematicViewerPage;
-export 'src/ui/schematic_app_bar.dart' show SchematicAppBar;
 export 'src/ui/standalone_schematic_viewer_page.dart'
     show StandaloneSchematicViewerPage;
