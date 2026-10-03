@@ -287,6 +287,38 @@ class SchematicConstants {
       busLabelThresholdMultiplier * 25.0; // 625px
 }
 
+const _preferredPngExportPixelRatio = 6.0;
+const _maxPngExportDimension = 4096.0;
+const _maxPngExportPixels = 16 * 1024 * 1024;
+
+/// Returns a PNG scale that keeps the complete visible viewport capturable.
+///
+/// The export boundary has the same logical size and transform as the current
+/// canvas. Reducing the pixel ratio changes only output resolution, not the
+/// schematic region captured: a fit-to-canvas view exports the entire
+/// schematic, while a zoomed view exports exactly the visible region.
+@visibleForTesting
+double pngExportPixelRatioForViewport(Size viewportSize) {
+  if (viewportSize.isEmpty ||
+      !viewportSize.width.isFinite ||
+      !viewportSize.height.isFinite) {
+    return 1;
+  }
+
+  final maximumDimension = math.max(
+    viewportSize.width,
+    viewportSize.height,
+  );
+  final dimensionRatio = _maxPngExportDimension / maximumDimension;
+  final areaRatio = math.sqrt(
+    _maxPngExportPixels / (viewportSize.width * viewportSize.height),
+  );
+  return math.min(
+    _preferredPngExportPixelRatio,
+    math.min(dimensionRatio, areaRatio),
+  );
+}
+
 /// Icon types rendered inside expand/collapse control buttons.
 enum _ControlIcon {
   /// Horizontal line (−) — collapse.
@@ -352,6 +384,9 @@ class SchematicPainter extends CustomPainter {
   /// suppressed so they don't appear in PNG snapshots.
   final ValueNotifier<bool> snapshotMode;
 
+  /// Whether multi-bit signal width annotations are painted over wires.
+  final bool displaySignalWidths;
+
   /// Constructor for `SchematicPainter`.
   SchematicPainter({
     required this.layout,
@@ -367,6 +402,7 @@ class SchematicPainter extends CustomPainter {
     this.highlightedNodeId,
     this.pendingToggleNodeId,
     this.isNodeInScope,
+    this.displaySignalWidths = true,
   }) : super(
           repaint: Listenable.merge([
             viewTransform,
@@ -2306,6 +2342,10 @@ class SchematicPainter extends CustomPainter {
       }
     }
 
+    if (!displaySignalWidths) {
+      return;
+    }
+
     // --- Bus width labels ------------------------------------------------
     // Label each wire's longest qualifying segment.
     final labeledWires = <String>{};
@@ -2508,6 +2548,9 @@ class SchematicPainter extends CustomPainter {
       if (pendingToggleNodeId != oldDelegate.pendingToggleNodeId) {
         reasons.add('pendingToggleNodeId');
       }
+      if (displaySignalWidths != oldDelegate.displaySignalWidths) {
+        reasons.add('displaySignalWidths');
+      }
 
       if (reasons.isNotEmpty) {
         debugPrint('[SchematicPainter] shouldRepaint=true, reasons: $reasons');
@@ -2521,7 +2564,8 @@ class SchematicPainter extends CustomPainter {
         !_setEquals(selectedWireIds, oldDelegate.selectedWireIds) ||
         !_setEquals(selectedNodeIds, oldDelegate.selectedNodeIds) ||
         highlightedNodeId != oldDelegate.highlightedNodeId ||
-        pendingToggleNodeId != oldDelegate.pendingToggleNodeId;
+        pendingToggleNodeId != oldDelegate.pendingToggleNodeId ||
+        displaySignalWidths != oldDelegate.displaySignalWidths;
   }
 
   static bool _setEquals(Set<String> a, Set<String> b) {
@@ -2561,6 +2605,9 @@ class SchematicCanvas extends StatefulWidget {
 
   /// Whether the canvas should be dimmed (during layout computation).
   final bool isDimmed;
+
+  /// Whether multi-bit signal width annotations are painted over wires.
+  final bool displaySignalWidths;
 
   /// Port ID to focus on after incremental expansion.
   /// When set, the canvas pans so this port is centred at the current zoom
@@ -2722,6 +2769,7 @@ class SchematicCanvas extends StatefulWidget {
     this.pendingToggleNodeId,
     this.recentlyToggledNodeId,
     this.isDimmed = false,
+    this.displaySignalWidths = true,
     this.signalValueLookup,
     this.signalNameForPort,
     this.focusPortId,
@@ -2759,6 +2807,12 @@ class SchematicCanvas extends StatefulWidget {
       ..add(StringProperty('pendingToggleNodeId', pendingToggleNodeId))
       ..add(StringProperty('recentlyToggledNodeId', recentlyToggledNodeId))
       ..add(DiagnosticsProperty<bool>('isDimmed', isDimmed))
+      ..add(
+        DiagnosticsProperty<bool>(
+          'displaySignalWidths',
+          displaySignalWidths,
+        ),
+      )
       ..add(StringProperty('focusPortId', focusPortId))
       ..add(
         ObjectFlagProperty<
@@ -4395,11 +4449,15 @@ class SchematicCanvasState extends State<SchematicCanvas> {
       return;
     }
     try {
+      final viewportSize =
+          _exportBoundaryKey.currentContext?.size ?? context.size;
       await captureBoundaryToPng(
         context,
         boundaryKey: _exportBoundaryKey,
         filePrefix: 'schematic',
-        pixelRatio: 6,
+        pixelRatio: viewportSize == null
+            ? _preferredPngExportPixelRatio
+            : pngExportPixelRatioForViewport(viewportSize),
         saveFn: vscode_interop.isVscodeWebview() ? _vscodeSavePng : null,
       );
     } finally {
@@ -6701,6 +6759,7 @@ class SchematicCanvasState extends State<SchematicCanvas> {
           layout: widget.layout,
           viewTransform: _viewTransformNotifier,
           snapshotMode: _snapshotModeNotifier,
+          displaySignalWidths: widget.displaySignalWidths,
           colorScheme: widget.colorScheme,
           highlightedWireName: _highlightedWireName,
           selectedEdgeScope: _selectedEdgeScope,

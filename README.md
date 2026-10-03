@@ -228,6 +228,7 @@ The result counter identifies the current match and total number of matches.
 | Highlight all segments of a wire | Click a wire |
 | Zoom to the highlighted wire | Double-click |
 | Fit the complete schematic | `F` |
+| Toggle multi-bit width overlays | Settings menu: **Display widths** |
 | Find a wire | `Ctrl+F` / `Cmd+F` |
 | Navigate wire-search results | `Up` / `Down` |
 | Select the current search result | `Enter` |

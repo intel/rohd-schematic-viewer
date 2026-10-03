@@ -35,6 +35,8 @@ import 'package:rohd_schematic_viewer/src/services/schematic_layout_stub.dart'
 import 'package:rohd_schematic_viewer/src/ui/schematic_app_bar.dart';
 import 'package:rohd_schematic_viewer/src/ui/schematic_expansion_mode.dart';
 
+enum _SchematicSettingsAction { toggleDisplayWidths }
+
 /// Base state class for schematic viewer pages.
 /// Contains common logic for layout computation, node toggling, and rendering.
 abstract class BaseSchematicViewerState<T extends StatefulWidget>
@@ -102,6 +104,10 @@ abstract class BaseSchematicViewerState<T extends StatefulWidget>
   /// When set, the canvas pans to keep this port centred at the current
   /// zoom level instead of fitting the whole node.
   String? focusPortId;
+
+  // This affects only painting, so preserve the current layout and view
+  // transform when it changes.
+  bool _displaySignalWidths = true;
 
   /// External hierarchy service from the parent application.
   /// Override in subclass to provide access to the widget's externalHierarchy.
@@ -2330,6 +2336,25 @@ abstract class BaseSchematicViewerState<T extends StatefulWidget>
             ),
           ),
         ),
+      PopupMenuButton<_SchematicSettingsAction>(
+        tooltip: 'Schematic settings',
+        icon: const Icon(Icons.settings, size: 18),
+        onSelected: (action) {
+          switch (action) {
+            case _SchematicSettingsAction.toggleDisplayWidths:
+              setState(() {
+                _displaySignalWidths = !_displaySignalWidths;
+              });
+          }
+        },
+        itemBuilder: (context) => [
+          CheckedPopupMenuItem<_SchematicSettingsAction>(
+            value: _SchematicSettingsAction.toggleDisplayWidths,
+            checked: _displaySignalWidths,
+            child: const Text('Display widths'),
+          ),
+        ],
+      ),
     ];
 
     return SchematicAppBar(
@@ -2362,6 +2387,7 @@ abstract class BaseSchematicViewerState<T extends StatefulWidget>
           colorScheme: isDarkMode
               ? SchematicColorScheme.dark
               : SchematicColorScheme.light,
+          displaySignalWidths: _displaySignalWidths,
           onNodeToggle: handleNodeToggle,
           onPortExpand: handlePortExpand,
           onPortExpandThrough: handlePortExpandThrough,

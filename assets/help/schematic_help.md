@@ -8,6 +8,9 @@ Keybindings
 Loading
   🔄  Reload current schematic
 
+Settings
+  ⚙️  Display widths  Show or hide blue multi-bit signal-width overlays
+
 Zooming
   Scroll          Zoom in / out
   F               Fit to canvas
@@ -45,6 +48,12 @@ Selection
 | Key     | Description                                              |
 | ------- | -------------------------------------------------------- |
 | 🔄 Reload | Re-read and re-layout the current schematic from disk |
+
+## Settings
+
+| Control | Description |
+| ------- | ----------- |
+| ⚙️ Settings → Display widths | Show or hide blue width annotations on multi-bit signals without re-layout. |
 
 ## Zooming
 

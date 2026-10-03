@@ -92,6 +92,57 @@ void main() {
     },
   );
 
+  testWidgets('toggles width overlays from the schematic settings menu', (
+    tester,
+  ) async {
+    final engine = _RecordingLayoutEngine();
+
+    await tester.pumpWidget(
+      BlocProvider(
+        create: (_) => SchematicThemeCubit(),
+        child: MaterialApp(
+          home: FlutterSchematicViewerPage(
+            initialSchematicJson:
+                File('assets/FilterBank.rohd.json').readAsStringSync(),
+            layoutEngine: engine,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    await tester.pump();
+
+    expect(
+      tester
+          .widget<SchematicCanvas>(find.byType(SchematicCanvas))
+          .displaySignalWidths,
+      isTrue,
+    );
+
+    await tester.tap(find.byTooltip('Schematic settings'));
+    await tester.pumpAndSettle();
+    expect(find.text('Display widths'), findsOneWidget);
+
+    await tester.tap(
+      find.ancestor(
+        of: find.text('Display widths'),
+        matching: find.byWidgetPredicate(
+          (widget) => widget is CheckedPopupMenuItem,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<SchematicCanvas>(find.byType(SchematicCanvas))
+          .displaySignalWidths,
+      isFalse,
+    );
+    expect(engine.elkGraphs, hasLength(1));
+  });
+
   testWidgets('handles FilterBank updates from an extension host', (
     tester,
   ) async {
