@@ -5,7 +5,7 @@
 [![Chat](https://img.shields.io/discord/1001179329411166267?label=Chat)](https://discord.gg/jubxF84yGw)
 [![License](https://img.shields.io/badge/License-BSD--3-blue)](LICENSE)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
-[Coverage workflow](https://github.com/intel/rohd-schematic-viewer/blob/main/.github/workflows/coverage.yml)
+[Coverage workflow](https://raw.githubusercontent.com/intel/rohd-schematic-viewer/refs/heads/badges/coverage/main.svg)](https://github.com/intel/rohd-schematic-viewer/blob/main/.github/workflows/coverage.yml)
 
 ROHD Schematic Viewer is an interactive viewer for netlists produced by the
 **ROHD netlister** using  a superset of the **Yosys JSON** netlist format (which
