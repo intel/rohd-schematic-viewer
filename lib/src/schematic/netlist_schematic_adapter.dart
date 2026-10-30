@@ -119,12 +119,25 @@ class NetlistSchematicAdapter {
 
   static String _topModuleName(Map<String, _YosysModule> modules) {
     for (final module in modules.values) {
-      if (module.attributes['top'] == 1) {
+      if (isTopModule(module.attributes)) {
         return module.name;
       }
     }
     return modules.keys.first;
   }
+
+  /// Whether a module's [attributes] mark it as the top module.
+  ///
+  /// ROHD writes the flag as the number `1`. Yosys `write_json` writes
+  /// attribute values as binary strings, so the same flag appears as
+  /// `"00000000000000000000000000000001"`. Any nonzero value counts.
+  static bool isTopModule(Map<String, dynamic>? attributes) =>
+      switch (attributes?['top']) {
+        final num value => value != 0,
+        final bool value => value,
+        final String value => RegExp(r'^[01]*1[01]*$').hasMatch(value),
+        _ => false,
+      };
 
   /// Serialize the current visible schematic state as ELK JSON.
   String toJsGraph() => schematic.toJsGraph();
