@@ -1,3 +1,8 @@
+## 0.3.0
+
+- Breaking: Require ROHD `^0.7.0`.
+- Migrate gate catalog generation to `concat`.
+
 ## 0.2.5
 
 - Fix Go to Source in the VS Code Wasm renderer by accepting numeric FLC line and column values in both direct navigation and the frame-selection popup.

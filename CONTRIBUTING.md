@@ -78,6 +78,11 @@ flutter pub get
 flutter test
 ```
 
+Bare `dart test` reports a diagnostic because the Flutter tests require
+Flutter's test runner. Explicit paths bypass the diagnostic and can be used
+for standalone Dart tests, such as the browser tests documented in
+[Indexed Netlist Loading](doc/INDEXED_NETLIST_LOADING.md#testing-and-profiling).
+
 ## How to Contribute
 
 ### Reporting Vulnerabilities
@@ -114,7 +119,7 @@ Take a look around the issues on the repo and see if there's any you'd like to t
 
 If you have a change that you have implemented and would like to contribute, you can open a pull request. Please try to make sure you have implemented tests covering the changes, if applicable. Smaller, simpler pull requests are easier to review.
 
-Be sure to run the test suite (`dart test`) before asking for your code to be merged. You may also locally generate API documentation (`dart doc`) to make sure it looks right and doesn't have any errors. You should use the dart formatter on all code (`dart format .`), and may prefer to have it automatically format on every file save. If you are using VSCode with the Dart extension, then consider using the recommended settings: <https://dartcode.org/docs/recommended-settings/>
+Be sure to run the test suite (`flutter test` or `make test`) before asking for your code to be merged. You may also locally generate API documentation (`dart doc`) to make sure it looks right and doesn't have any errors. You should use the dart formatter on all code (`dart format .`), and may prefer to have it automatically format on every file save. If you are using VSCode with the Dart extension, then consider using the recommended settings: <https://dartcode.org/docs/recommended-settings/>
 
 **Tests must pass, documentation must generate, and the formatter must be run on every pull request or the automated GitHub Actions flow will fail.**
 
