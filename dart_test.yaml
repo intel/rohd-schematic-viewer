@@ -1,0 +1,4 @@
+# Root Flutter tests require Flutter's test runner. Explicit paths passed to
+# dart test override this default, including the standalone browser tests.
+paths:
+  - tool/test/flutter_test_runner_guard.dart

@@ -112,7 +112,7 @@ class GateCatalog extends Module {
     addOutput('replicate_x3_out', width: 12) <= a4.replicate(3);
     addOutput('replicate_x5_out', width: 20) <= a4.replicate(5);
     addOutput('slice_out', width: 4) <= a8.getRange(2, 6);
-    addOutput('swizzle_out', width: 8) <= [a4, b4].swizzle();
+    addOutput('swizzle_out', width: 8) <= [a4, b4].concat();
 
     TriStateBuffer(a8, enable: enableTri, name: 'tsb').out.gets(bus);
     addOutput('tribuf_readback_out', width: 8) <= bus;
