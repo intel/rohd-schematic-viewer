@@ -353,6 +353,5 @@ troubleshooting builds are in [doc/BUILD.md](doc/BUILD.md).
 - [Yosys](https://github.com/YosysHQ/yosys)
 
 ---
-
 Copyright (C) 2026 Intel Corporation  
 SPDX-License-Identifier: BSD-3-Clause
