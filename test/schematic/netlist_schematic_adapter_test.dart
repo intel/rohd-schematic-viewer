@@ -81,6 +81,54 @@ void main() {
     }
     expect(children.every((node) => node.hwMeta.cls == 'Operator'), isTrue);
   });
+
+  test('opens the module Yosys marks as top with a binary-string attribute',
+      () {
+    // Shape of `yosys -p "hierarchy -top soc; write_json"`: attribute values
+    // are binary strings, and the top module is not listed first.
+    final adapter = NetlistSchematicAdapter.fromJson(
+      jsonEncode({
+        'modules': {
+          'leaf': {
+            'attributes': {'src': 'leaf.v:1.1-3.10'},
+            'ports': <String, dynamic>{},
+            'netnames': <String, dynamic>{},
+            'cells': <String, dynamic>{},
+          },
+          'soc': {
+            'attributes': {
+              'top': '00000000000000000000000000000001',
+              'src': 'soc.v:1.1-5.10',
+            },
+            'ports': <String, dynamic>{},
+            'netnames': <String, dynamic>{},
+            'cells': {'u_leaf': _cell('leaf')},
+          },
+        },
+      }),
+    );
+
+    expect(adapter.schematic.getNode('0')!.definition, 'soc');
+  });
+
+  test('recognises every form of the top attribute', () {
+    for (final value in <Object>[1, '1', '00000000000000000000000000000001']) {
+      expect(
+        NetlistSchematicAdapter.isTopModule({'top': value}),
+        isTrue,
+        reason: '$value',
+      );
+    }
+    for (final value in <Object>[0, '0', '00000000000000000000000000000000']) {
+      expect(
+        NetlistSchematicAdapter.isTopModule({'top': value}),
+        isFalse,
+        reason: '$value',
+      );
+    }
+    expect(NetlistSchematicAdapter.isTopModule({}), isFalse);
+    expect(NetlistSchematicAdapter.isTopModule(null), isFalse);
+  });
 }
 
 Map<String, dynamic> _flipFlopCell(String type) => {

@@ -1043,7 +1043,7 @@ class _EmbeddedSchematicViewerState
         for (final entry in modules.entries) {
           final attrs = (entry.value as Map<String, dynamic>)['attributes']
               as Map<String, dynamic>?;
-          if (attrs?['top'] == 1) {
+          if (NetlistSchematicAdapter.isTopModule(attrs)) {
             topKey = entry.key;
             break;
           }
@@ -1097,7 +1097,7 @@ class _EmbeddedSchematicViewerState
               '[EmbeddedSchematicViewer][DIAG]   ${entry.key}: '
               'cells=${cells.length}, ports=${ports.length}, '
               'netnames=${netnames.length}'
-              '${attrs?["top"] == 1 ? " [TOP]" : ""}',
+              '${NetlistSchematicAdapter.isTopModule(attrs) ? " [TOP]" : ""}',
             );
           }
         }
@@ -1154,7 +1154,7 @@ class _EmbeddedSchematicViewerState
           for (final entry in modules.entries) {
             final attrs = (entry.value as Map<String, dynamic>)['attributes']
                 as Map<String, dynamic>?;
-            if (attrs?['top'] == 1) {
+            if (NetlistSchematicAdapter.isTopModule(attrs)) {
               topModuleKey = entry.key;
               break;
             }
@@ -1255,7 +1255,7 @@ class _EmbeddedSchematicViewerState
     for (final entry in modules.entries) {
       final attrs = (entry.value as Map<String, dynamic>)['attributes']
           as Map<String, dynamic>?;
-      if (attrs?['top'] == 1) {
+      if (NetlistSchematicAdapter.isTopModule(attrs)) {
         topModuleKey = entry.key;
         break;
       }
@@ -1288,7 +1288,7 @@ class _EmbeddedSchematicViewerState
     for (final entry in modules.entries) {
       final attrs = (entry.value as Map<String, dynamic>)['attributes']
           as Map<String, dynamic>?;
-      if (attrs?['top'] == 1) {
+      if (NetlistSchematicAdapter.isTopModule(attrs)) {
         return entry.key;
       }
     }
@@ -2868,7 +2868,7 @@ class _EmbeddedSchematicViewerState
     for (final entry in localModules.entries) {
       final attrs = (entry.value as Map<String, dynamic>)['attributes']
           as Map<String, dynamic>?;
-      if (attrs?['top'] == 1) {
+      if (NetlistSchematicAdapter.isTopModule(attrs)) {
         topKey = entry.key;
         break;
       }
