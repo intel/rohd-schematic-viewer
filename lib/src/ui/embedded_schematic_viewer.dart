@@ -182,7 +182,6 @@ class EmbeddedSchematicViewer extends StatefulWidget {
 
   /// Constructor for `EmbeddedSchematicViewer`.
   // Keep the recently deprecated constructor during the ROHD 0.7 migration.
-  // ignore: remove_deprecations_in_breaking_versions
   @Deprecated(
     'Use EmbeddedSchematicViewer.fromJson, fromNetlistMap, fromHierarchy, '
     'or fromAsset.',
