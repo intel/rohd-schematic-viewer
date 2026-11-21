@@ -14,7 +14,7 @@ import 'dart:convert';
 import 'dart:js_interop';
 import 'dart:typed_data';
 
-import 'package:cross_file/cross_file.dart';
+import 'package:file_selector/file_selector.dart' show XFile;
 import 'package:rohd_schematic_viewer/src/services/indexed_netlist_loader.dart';
 import 'package:test/test.dart';
 import 'package:web/web.dart' as web;

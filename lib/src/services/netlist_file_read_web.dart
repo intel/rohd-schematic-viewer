@@ -11,7 +11,7 @@ import 'dart:async';
 import 'dart:js_interop';
 import 'dart:typed_data';
 
-import 'package:cross_file/cross_file.dart';
+import 'package:file_selector/file_selector.dart' show XFile;
 import 'package:web/web.dart' as web;
 
 /// Amortizes browser fetch overhead without buffering the entire file.

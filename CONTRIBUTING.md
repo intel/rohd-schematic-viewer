@@ -79,8 +79,7 @@ flutter test
 ```
 
 Bare `dart test` reports a diagnostic because the Flutter tests require
-Flutter's test runner. Explicit paths bypass the diagnostic and can be used
-for standalone Dart tests, such as the browser tests documented in
+Flutter's test runner. For the Chrome test command, see
 [Indexed Netlist Loading](doc/INDEXED_NETLIST_LOADING.md#testing-and-profiling).
 
 ## How to Contribute

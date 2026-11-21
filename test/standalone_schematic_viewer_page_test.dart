@@ -13,8 +13,6 @@ import 'dart:typed_data' show ByteData, Uint8List;
 
 import 'package:flutter/services.dart' show LogicalKeyboardKey, rootBundle;
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'
-    as flutter_localizations;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:rohd_devtools_widgets/rohd_devtools_widgets.dart'
@@ -197,7 +195,7 @@ void main() {
           create: (_) => SchematicThemeCubit(),
           child: MaterialApp(
             localizationsDelegates: const [
-              flutter_localizations.GlobalMaterialLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
             ],
             home: StandaloneSchematicViewerPage(
               initialSchematicJson:
@@ -297,7 +295,7 @@ Future<void> _pumpProductionFixture(
       create: (_) => SchematicThemeCubit(),
       child: MaterialApp(
         localizationsDelegates: const [
-          flutter_localizations.GlobalMaterialLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
         ],
         home: StandaloneSchematicViewerPage(
           initialSchematicJson: File(fixturePath).readAsStringSync(),

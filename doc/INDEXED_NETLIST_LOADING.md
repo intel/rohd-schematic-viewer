@@ -80,11 +80,11 @@ The browser byte source and indexer can be tested independently using
 synthetic Blob files:
 
 ```bash
-dart test --platform chrome --compiler dart2wasm \
+flutter test --platform chrome --wasm \
   test/browser_indexed_netlist_loader_test.dart
 ```
 
-Use `dart2js` instead of `dart2wasm` when testing with that compiler. These
+Omit `--wasm` to test the JavaScript build. These
 tests cover bounded range reads and on-demand connectivity.
 
 ## Scope and limitations

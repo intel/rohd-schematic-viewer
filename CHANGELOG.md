@@ -1,3 +1,8 @@
+## Unreleased
+
+- Use the Material localization delegate from `material_ui` instead of the deprecated `flutter_localizations` delegate.
+- Use `XFile` from `file_selector` for netlist loading and remove the direct dependency on `cross_file`. The embedded viewer API is unchanged.
+
 ## 0.3.1
 
 - Fix fan-in endpoint resolution for legacy netlists with a synthetic cell and signal sharing a name.

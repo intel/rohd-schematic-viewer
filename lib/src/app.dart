@@ -9,8 +9,6 @@
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'
-    as flutter_localizations;
 import 'package:material_ui/material_ui.dart';
 import 'package:rohd_schematic_viewer/src/cubit/schematic_theme_cubit.dart';
 import 'package:rohd_schematic_viewer/src/services/vscode_webview_interop_stub.dart'
@@ -78,7 +76,7 @@ class SchematicViewerApp extends StatelessWidget {
             title: 'ROHD Schematic Viewer',
             debugShowCheckedModeBanner: false,
             localizationsDelegates: const [
-              flutter_localizations.GlobalMaterialLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
             ],
             theme: themeMode == SchematicThemeMode.dark
                 ? _buildDarkTheme()
