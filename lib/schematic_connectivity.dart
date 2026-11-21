@@ -288,8 +288,7 @@ class NetlistSchematicConnectivity {
     final paths = <String, String>{};
     for (final node in nodes) {
       final adapterPath = _adapterNodePath(node);
-      final occurrence = hierarchy.occurrenceByPathname(adapterPath) ??
-          _occurrenceForAdapterPath(hierarchy.root, adapterPath);
+      final occurrence = _occurrenceForAdapterPath(hierarchy.root, adapterPath);
       paths[node.id] = occurrence?.path() ?? adapterPath;
     }
     return paths;
@@ -334,7 +333,8 @@ class NetlistSchematicConnectivity {
     return SchematicPortOccurrence(
       nodePath: nodePath,
       nodeAddress:
-          hierarchy.pathnameToAddress(nodePath) ?? node.occurrence.address,
+          _occurrenceForAdapterPath(hierarchy.root, nodePath)?.address ??
+              node.occurrence.address,
       portId: port.id,
       direction: port.direction,
     );

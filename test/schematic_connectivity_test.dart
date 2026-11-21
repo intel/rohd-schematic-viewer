@@ -10,7 +10,8 @@
 import 'dart:convert' show jsonEncode;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:rohd_hierarchy/rohd_hierarchy.dart' show BaseHierarchyAdapter;
+import 'package:rohd_hierarchy/rohd_hierarchy.dart'
+    show BaseHierarchyAdapter, NetlistHierarchyAdapter;
 import 'package:rohd_schematic_viewer/schematic_connectivity.dart';
 
 const _netlist = r'''
@@ -228,6 +229,32 @@ const _twoBitNetlist = r'''
 }
 ''';
 
+const _legacyConstantNetlist = r'''
+{
+  "modules": {
+    "Top": {
+      "ports": {"out": {"direction": "output", "bits": [3]}},
+      "netnames": {
+        "out": {"bits": [3]},
+        "const_0_1_h1": {"bits": [2], "attributes": {"computed": 1}}
+      },
+      "cells": {
+        "const_0_1_h1": {
+          "type": "$const",
+          "port_directions": {"1'h1": "output"},
+          "connections": {"1'h1": [2]}
+        },
+        "invert": {
+          "type": "$not",
+          "port_directions": {"A": "input", "Y": "output"},
+          "connections": {"A": [2], "Y": [3]}
+        }
+      }
+    }
+  }
+}
+''';
+
 void main() {
   late NetlistSchematicConnectivity connectivity;
 
@@ -352,6 +379,28 @@ void main() {
       inverterEndpoint.nodeAddress,
       externalHierarchy.root.children.single.address,
     );
+  });
+
+  test('resolves a legacy same-named constant driver and signal', () {
+    final hierarchy = NetlistHierarchyAdapter.fromJson(
+      _legacyConstantNetlist,
+      rootNameOverride: 'dut',
+    );
+    final legacyConnectivity = NetlistSchematicConnectivity.fromJson(
+      _legacyConstantNetlist,
+      externalHierarchy: hierarchy,
+    );
+    final wire = hierarchy.root.signals.singleWhere(
+      (signal) => signal.name == 'const_0_1_h1',
+    );
+    final driver = hierarchy.root.children.singleWhere(
+      (child) => child.name == 'const_0_1_h1',
+    );
+
+    final endpoint = legacyConnectivity.fanin(wire).single;
+    expect(endpoint.nodePath, 'dut/const_0_1_h1');
+    expect(endpoint.nodeAddress, driver.address);
+    expect(endpoint.nodeAddress, isNot(wire.address));
   });
 
   test('matches a child scope with an instance-named external root', () {

@@ -2,7 +2,7 @@ name: rohd_schematic_viewer
 description: "ROHD Schematic Viewer - Standalone Flutter schematic viewer for Yosys JSON netlists"
 homepage: https://intel.github.io/rohd-website/
 repository: https://github.com/intel/rohd-schematic-viewer
-version: 0.3.0
+version: 0.3.1
 issue_tracker: https://github.com/intel/rohd-schematic-viewer/issues
 
 environment:
@@ -13,6 +13,8 @@ dependencies:
   cross_file: ^0.3.4+2
   file_selector: ^1.0.3
   flutter:
+    sdk: flutter
+  flutter_localizations:
     sdk: flutter
   # State management for tabs
   flutter_bloc: ^9.0.0

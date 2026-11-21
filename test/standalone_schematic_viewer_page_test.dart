@@ -11,15 +11,15 @@ import 'dart:convert' show utf8;
 import 'dart:io';
 import 'dart:typed_data' show ByteData, Uint8List;
 
-// The embedded help widget still requires Flutter's MaterialLocalizations.
-// ignore: migrate_design_widgets
-import 'package:flutter/material.dart' show DefaultMaterialLocalizations;
 import 'package:flutter/services.dart' show LogicalKeyboardKey, rootBundle;
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_localizations/flutter_localizations.dart'
+    as flutter_localizations;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart' hide DefaultMaterialLocalizations;
+import 'package:material_ui/material_ui.dart';
 import 'package:rohd_devtools_widgets/rohd_devtools_widgets.dart'
     show AppBarOverlay;
+import 'package:rohd_schematic_viewer/src/app.dart';
 import 'package:rohd_schematic_viewer/src/cubit/schematic_theme_cubit.dart';
 import 'package:rohd_schematic_viewer/src/schematic/schematic_canvas.dart';
 import 'package:rohd_schematic_viewer/src/services/schematic_layout_engine.dart';
@@ -90,13 +90,16 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1400, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
+    await tester.pumpWidget(const SchematicViewerApp());
+    final delegates = tester
+        .widget<MaterialApp>(find.byType(MaterialApp))
+        .localizationsDelegates;
+
     await tester.pumpWidget(
       BlocProvider(
         create: (_) => SchematicThemeCubit(),
         child: MaterialApp(
-          localizationsDelegates: const [
-            DefaultMaterialLocalizations.delegate,
-          ],
+          localizationsDelegates: delegates,
           home: StandaloneSchematicViewerPage(
             initialSchematicJson:
                 File('assets/rohd_schematic.json').readAsStringSync(),
@@ -194,7 +197,7 @@ void main() {
           create: (_) => SchematicThemeCubit(),
           child: MaterialApp(
             localizationsDelegates: const [
-              DefaultMaterialLocalizations.delegate,
+              flutter_localizations.GlobalMaterialLocalizations.delegate,
             ],
             home: StandaloneSchematicViewerPage(
               initialSchematicJson:
@@ -294,7 +297,7 @@ Future<void> _pumpProductionFixture(
       create: (_) => SchematicThemeCubit(),
       child: MaterialApp(
         localizationsDelegates: const [
-          DefaultMaterialLocalizations.delegate,
+          flutter_localizations.GlobalMaterialLocalizations.delegate,
         ],
         home: StandaloneSchematicViewerPage(
           initialSchematicJson: File(fixturePath).readAsStringSync(),

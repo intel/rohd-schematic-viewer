@@ -1,3 +1,8 @@
+## 0.3.1
+
+- Fix fan-in endpoint resolution for legacy netlists with a synthetic cell and signal sharing a name.
+- Use supported Flutter localization delegates for legacy help widgets without importing deprecated Material APIs.
+
 ## 0.3.0
 
 - Breaking: Require ROHD `^0.7.0`.
