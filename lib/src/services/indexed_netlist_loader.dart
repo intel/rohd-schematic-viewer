@@ -11,7 +11,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:cross_file/cross_file.dart';
+import 'package:file_selector/file_selector.dart' show XFile;
 
 import 'package:rohd_schematic_viewer/src/services/netlist_file_read_stub.dart'
     if (dart.library.js_interop) 'package:rohd_schematic_viewer/src/services/netlist_file_read_web.dart'

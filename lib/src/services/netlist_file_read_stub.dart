@@ -10,7 +10,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:cross_file/cross_file.dart';
+import 'package:file_selector/file_selector.dart' show XFile;
 
 /// Native reads do not incur browser fetch overhead.
 const int maxReadBytes = 65536;

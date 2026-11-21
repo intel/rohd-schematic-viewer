@@ -10,7 +10,6 @@ environment:
   flutter: '>=3.44.0'
 
 dependencies:
-  cross_file: ^0.3.4+2
   file_selector: ^1.0.3
   flutter:
     sdk: flutter

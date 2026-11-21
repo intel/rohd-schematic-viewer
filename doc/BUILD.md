@@ -115,8 +115,8 @@ Common targets:
 | `make real-clean` | Run `make clean`, `flutter clean`, remove Node dependencies, dependency-source task state, and staged generated assets |
 
 Use `flutter test` or `make test` for the Flutter suite. Bare `dart test`
-fails with a diagnostic; explicit paths bypass it for standalone Dart tests,
-such as the [browser indexing tests](INDEXED_NETLIST_LOADING.md#testing-and-profiling).
+fails with a diagnostic. For the Chrome test command, see the
+[browser indexing tests](INDEXED_NETLIST_LOADING.md#testing-and-profiling).
 
 Use `make help` for the current target list.
 
