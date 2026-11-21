@@ -14,12 +14,12 @@ dependencies:
   file_selector: ^1.0.3
   flutter:
     sdk: flutter
-  flutter_localizations:
-    sdk: flutter
   # State management for tabs
   flutter_bloc: ^9.0.0
   # JavaScript runtime for native platforms (Linux)
   flutter_js: ^0.8.3
+  flutter_localizations:
+    sdk: flutter
   flutter_web_plugins:
     sdk: flutter
   material_ui: ^1.1.0
