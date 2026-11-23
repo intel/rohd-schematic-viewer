@@ -254,26 +254,14 @@ abstract class BaseSchematicViewerState<T extends StatefulWidget>
         return false;
       }
       final modules = loader.hierarchyJson['modules'] as Map<String, dynamic>;
-      final enriched = {
-        ...loader.hierarchyJson,
-        'modules': {...modules, ...updates},
-      };
-      final snapshot = adapter.schematic.expansionSnapshot();
-      await phase('Preparing hierarchy with connectivity...');
+      await phase('Connecting loaded modules...');
       if (!current()) {
         return false;
       }
-      final json = jsonEncode(enriched);
-      await phase('Building hierarchy with connectivity...');
-      if (!current()) {
-        return false;
-      }
-      final rebuilt =
-          NetlistSchematicAdapter.fromJson(json, strictBlocksOnly: true);
-      rebuilt.schematic.restoreExpansionSnapshot(snapshot);
-      schematicAdapter = rebuilt;
-      schematicJson = json;
+      adapter.hydrateFileModules(updates);
       modules.addAll(updates);
+      _schematicJson = null;
+      _indexedDocument = loader.hierarchyJson;
       _loadedFileModules.addAll(definitions);
       return true;
     } on Exception catch (e) {
@@ -317,10 +305,22 @@ abstract class BaseSchematicViewerState<T extends StatefulWidget>
 
   /// Current schematic layout result.
   SchematicLayoutResult? layout;
-  @protected
+  Map<String, dynamic>? _indexedDocument;
+  String? _schematicJson;
 
-  /// Current schematic JSON data.
-  String? schematicJson;
+  /// Current schematic JSON, serialized on demand for indexed files.
+  @protected
+  String? get schematicJson => _schematicJson ??=
+      _indexedDocument == null ? null : jsonEncode(_indexedDocument);
+
+  /// Replace the current schematic document with a serialized netlist.
+  @protected
+  set schematicJson(String? value) {
+    _indexedDocument = null;
+    _schematicJson = value;
+  }
+
+  bool get _hasSchematic => _schematicJson != null || _indexedDocument != null;
   @protected
 
   /// Current file name.
@@ -2658,15 +2658,14 @@ abstract class BaseSchematicViewerState<T extends StatefulWidget>
         Tooltip(
           message: 'Reload current schematic',
           child: MouseRegion(
-            cursor: schematicJson != null
-                ? SystemMouseCursors.click
-                : MouseCursor.defer,
+            cursor:
+                _hasSchematic ? SystemMouseCursors.click : MouseCursor.defer,
             child: GestureDetector(
-              onTap: schematicJson != null ? handleReload : null,
+              onTap: _hasSchematic ? handleReload : null,
               child: Padding(
                 padding: const EdgeInsets.all(8),
                 child: Opacity(
-                  opacity: schematicJson != null ? 1.0 : 0.5,
+                  opacity: _hasSchematic ? 1.0 : 0.5,
                   child: platformIcon(Icons.refresh, '🔄', size: 18),
                 ),
               ),
@@ -2719,7 +2718,9 @@ abstract class BaseSchematicViewerState<T extends StatefulWidget>
         final canvas = SchematicCanvas(
           key: canvasKey,
           layout: layout!,
-          netlistJson: schematicJson,
+          netlistJson: _indexedDocument != null && externalHierarchy != null
+              ? null
+              : schematicJson,
           externalHierarchy: externalHierarchy,
           colorScheme: isDarkMode
               ? SchematicColorScheme.dark
