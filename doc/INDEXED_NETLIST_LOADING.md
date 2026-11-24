@@ -60,6 +60,9 @@ asynchronous read.
 
 ## Testing and profiling
 
+Before comparing solver timings, verify that both results still route the
+expected wires. See [Cross-checking ELK layouts with xchkr](LAYOUT_CROSS_CHECK.md).
+
 The file-backed startup and on-demand expansion journeys run without a
 browser:
 

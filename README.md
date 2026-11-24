@@ -343,6 +343,9 @@ File/Line/Column source information.
 
 ## Development and Contributions
 
+To compare saved ELK layouts for wiring regressions and placement differences,
+see [Cross-checking ELK layouts with xchkr](doc/LAYOUT_CROSS_CHECK.md).
+
 This README is the user guide. Instructions for selecting dependency modes,
 running Flutter configurations, packaging the VS Code extension, and
 troubleshooting builds are in [doc/BUILD.md](doc/BUILD.md).
