@@ -28,6 +28,8 @@ import 'package:rohd_hierarchy/rohd_hierarchy.dart';
 import 'package:rohd_schematic_viewer/src/cubit/schematic_theme_cubit.dart';
 import 'package:rohd_schematic_viewer/src/schematic/netlist_schematic_adapter.dart';
 import 'package:rohd_schematic_viewer/src/schematic/schematic_canvas.dart';
+import 'package:rohd_schematic_viewer/src/schematic/schematic_data.dart'
+    show LayoutNode;
 import 'package:rohd_schematic_viewer/src/schematic/schematic_graph.dart';
 import 'package:rohd_schematic_viewer/src/services/hierarchy_schematic_synthesizer.dart';
 import 'package:rohd_schematic_viewer/src/services/schematic_layout_models.dart';
@@ -2969,6 +2971,33 @@ class _EmbeddedSchematicViewerState
       }
     }
     return false;
+  }
+
+  @override
+  Future<void> prepareTraceConnectivity(LayoutNode node) async {
+    final key = node.definition;
+    final modules = widget.netlistJsonMap?['modules'];
+    final fetch = widget.fetchModuleNetlist;
+    final adapter = schematicAdapter;
+    if (key == null ||
+        modules is! Map ||
+        fetch == null ||
+        adapter == null ||
+        (node.hyperedges?.isNotEmpty ?? false)) {
+      return;
+    }
+    final data = modules[key];
+    if (data is! Map<String, dynamic>) {
+      return;
+    }
+    final full = _needsUpgrade(data) ? ((await fetch(key))?[key]) : data;
+    if (!mounted || !identical(adapter, schematicAdapter)) {
+      throw StateError('Design changed');
+    }
+    if (full == null || _needsUpgrade(full as Map<String, dynamic>)) {
+      throw StateError('Connectivity unavailable for $key');
+    }
+    adapter.hydrateFileModules({key: full});
   }
 
   @override

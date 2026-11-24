@@ -885,6 +885,32 @@ abstract class BaseSchematicViewerState<T extends StatefulWidget>
   @protected
   Future<bool> ensureConnectivity(String nodeId) async => false;
 
+  /// Load one definition for inspection without toggling or laying it out.
+  @protected
+  Future<void> prepareTraceConnectivity(LayoutNode node) async {
+    final loader = _fileLoader;
+    final adapter = schematicAdapter;
+    final name = node.definition;
+    if (loader == null ||
+        adapter == null ||
+        name == null ||
+        _loadedFileModules.contains(name) ||
+        !loader.moduleNames.contains(name)) {
+      return;
+    }
+    final updates = await loader.fetchModuleNetlist(name);
+    if (!mounted ||
+        !identical(loader, _fileLoader) ||
+        !identical(adapter, schematicAdapter)) {
+      throw StateError('File changed');
+    }
+    adapter.hydrateFileModules(updates);
+    (loader.hierarchyJson['modules'] as Map<String, dynamic>).addAll(updates);
+    _schematicJson = null;
+    _indexedDocument = loader.hierarchyJson;
+    _loadedFileModules.add(name);
+  }
+
   /// Handle node toggle (expand/collapse).
   ///
   /// Uses either Dart-first or JS-first toggle based on `useDartFirstParsing`.
@@ -2739,6 +2765,25 @@ abstract class BaseSchematicViewerState<T extends StatefulWidget>
           onConvertToBlocksOnlyRecursive: handleConvertToBlocksOnlyRecursive,
           onExpandChild: handleExpandChild,
           onExpandWire: handleExpandWire,
+          traceWirePorts: schematicAdapter == null
+              ? null
+              : (scope, wire, {required drivers, required active}) {
+                  final adapter = schematicAdapter!;
+                  final generation = _fileGeneration;
+                  bool current() =>
+                      mounted &&
+                      active() &&
+                      generation == _fileGeneration &&
+                      identical(adapter, schematicAdapter);
+                  return adapter.schematic.traceWirePorts(scope, wire,
+                      drivers: drivers,
+                      current: current, prepare: (node) async {
+                    if (!current()) {
+                      throw StateError('Trace cancelled');
+                    }
+                    await prepareTraceConnectivity(node);
+                  });
+                },
           onExpandPath: handleExpandPath,
           signalNameForPort: (nodeId, portId) =>
               schematicAdapter?.schematic.signalNameForPort(nodeId, portId),

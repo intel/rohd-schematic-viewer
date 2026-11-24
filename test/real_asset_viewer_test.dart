@@ -1859,16 +1859,32 @@ void main() {
         find.text('Connected Ports: ${sentSignals!.single}'), findsOneWidget);
     final layout = engine.layouts.last;
     for (final id in [edge.sourcePort!, edge.targetPort!]) {
+      if (id == edge.targetPort) {
+        await tester.tap(find.text('Receivers'));
+        await tester.pumpAndSettle();
+      }
       final port = layout.ports.singleWhere((port) => port.id == id);
       final owner =
           layout.instances.singleWhere((i) => i.id == port.instanceId);
-      final text = tester.widget<SelectableText>(find.byType(SelectableText));
-      expect(text.data!.split('\n'),
-          contains('${owner.hierarchyPath}/${port.name}'));
+      expect(find.text('${owner.hierarchyPath}/${port.name}'), findsOneWidget);
     }
-    await tester.tap(find.text('Close'));
+    await tester.tap(find.text('Trace to leaves'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('FilterBank/ch0/mux/B'));
     await tester.pumpAndSettle();
     expect(engine.layouts, hasLength(layoutCount));
+    expect(find.byType(AlertDialog), findsNothing);
+    final target = layout.ports.singleWhere((p) => p.id == edge.targetPort);
+    final center =
+        Offset(target.x + target.width / 2, target.y + target.height / 2);
+    final viewport = tester.getSize(find.byType(SchematicCanvas));
+    expect(
+        (center * canvasState.currentScale +
+                canvasState.currentOffset -
+                viewport.center(Offset.zero))
+            .distance,
+        lessThan(0.01));
+    expect(canvasState.currentScale, greaterThanOrEqualTo(1.5));
   });
 
   testWidgets(

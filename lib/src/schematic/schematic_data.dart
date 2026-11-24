@@ -10,6 +10,9 @@
 
 import 'package:rohd_hierarchy/rohd_hierarchy.dart';
 
+/// Exact port identity and instance path, separate from its display label.
+typedef ConnectedPort = ({String id, String label, List<String> ownerPath});
+
 bool _hasRadixPrefix(String value) {
   final apostrophe = value.indexOf("'");
   if (apostrophe <= 0 || apostrophe + 1 >= value.length) {
@@ -770,6 +773,7 @@ class LayoutNode {
     if (_portHyperedgeIndex != null) {
       return _portHyperedgeIndex!;
     }
+
     final idx = <int, List<LayoutHyperedge>>{};
     final hes = hyperedges;
     if (hes != null) {

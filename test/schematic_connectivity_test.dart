@@ -7,12 +7,13 @@
 // 2026 September 29
 // Author: Desmond Kirkpatrick <desmond.a.kirkpatrick@intel.com>
 
-import 'dart:convert' show jsonEncode;
+import 'dart:convert' show jsonDecode, jsonEncode;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:rohd_hierarchy/rohd_hierarchy.dart'
     show BaseHierarchyAdapter, NetlistHierarchyAdapter;
 import 'package:rohd_schematic_viewer/schematic_connectivity.dart';
+import 'package:rohd_schematic_viewer/src/schematic/netlist_schematic_adapter.dart';
 
 const _netlist = r'''
 {
@@ -256,6 +257,25 @@ const _legacyConstantNetlist = r'''
 ''';
 
 void main() {
+  test('deep trace crosses collapsed instances in both directions and branches',
+      () async {
+    final doc = jsonDecode(_hierarchicalNetlist) as Map<String, dynamic>;
+    final modules = doc['modules'] as Map<String, dynamic>;
+    final topModule = modules['Top'] as Map<String, dynamic>;
+    final cells = topModule['cells'] as Map<String, dynamic>;
+    cells['u2'] = cells['u1'];
+    final graph = NetlistSchematicAdapter.fromJson(jsonEncode(doc)).schematic;
+    final top = graph.nodeMap.values.singleWhere((n) => n.definition == 'Top');
+    Future<List<String>> trace(String wire, {required bool drivers}) async =>
+        (await graph.traceWirePorts(top.id, wire,
+                drivers: drivers, current: () => true, prepare: (_) async {}))
+            .map((port) => port.label)
+            .toList();
+    expect(await trace('top_a', drivers: false),
+        ['Top/u1/inverter/A', 'Top/u2/inverter/A']);
+    expect(await trace('top_y', drivers: true),
+        ['Top/u1/inverter/Y', 'Top/u2/inverter/Y']);
+  });
   late NetlistSchematicConnectivity connectivity;
 
   setUp(() {
@@ -278,14 +298,29 @@ void main() {
     );
   });
 
-  test('traverses through transparent primitive gates', () {
+  test('transparent fanin and fanout stop at the first leaf port', () {
+    final nested = NetlistSchematicConnectivity.fromJson(_hierarchicalNetlist);
+    final signals = nested.hierarchy.root.signals;
+    final input = signals.singleWhere((s) => s.name == 'top_a');
+    final output = signals.singleWhere((s) => s.name == 'top_y');
+    final receiver =
+        nested.fanout(input, mode: SchematicTraversalMode.transparent).single;
+    final driver =
+        nested.fanin(output, mode: SchematicTraversalMode.transparent).single;
+    expect([receiver.nodePath, receiver.direction.toLowerCase()],
+        ['Top/u1/inverter', 'input']);
+    expect([driver.nodePath, driver.direction.toLowerCase()],
+        ['Top/u1/inverter', 'output']);
+  });
+
+  test('explicit primitive pass-through traverses inverter logic', () {
     final input = connectivity.hierarchy.root.signals.singleWhere(
       (signal) => signal.name == 'a',
     );
 
     final endpoints = connectivity.fanout(
       input,
-      mode: SchematicTraversalMode.transparent,
+      mode: SchematicTraversalMode.primitivePassThrough,
     );
 
     expect(endpoints, isNotEmpty);
@@ -305,7 +340,7 @@ void main() {
 
     final endpoints = chainedConnectivity.fanout(
       input,
-      mode: SchematicTraversalMode.transparent,
+      mode: SchematicTraversalMode.primitivePassThrough,
     );
 
     expect(endpoints, hasLength(1));

@@ -2699,6 +2699,101 @@ class SchematicGraph {
     return null;
   }
 
+  /// Follow one net through module ports, never through a primitive's logic.
+  Future<List<ConnectedPort>> traceWirePorts(
+    String scopeId,
+    String wireName, {
+    required bool drivers,
+    required Future<void> Function(LayoutNode) prepare,
+    required bool Function() current,
+  }) async {
+    final prepared = <String>{};
+    final seen = <(String, String)>{};
+    final results = <String, ConnectedPort>{};
+    final queue = Queue<(LayoutNode, LayoutHyperedge)>();
+    final indices = <String, Map<(String, int), List<LayoutHyperedge>>>{};
+    Future<void> load(LayoutNode node) async {
+      if (prepared.add(node.id)) {
+        await prepare(node);
+      }
+      if (!current()) {
+        throw StateError('Trace cancelled');
+      }
+    }
+
+    final scope = nodeMap[scopeId];
+    if (scope == null) {
+      throw StateError('Wire scope is no longer available');
+    }
+    await load(scope);
+    for (final h in scope.hyperedges ?? const <LayoutHyperedge>[]) {
+      if (h.name == wireName || h.id == wireName) {
+        queue.add((scope, h));
+      }
+    }
+    if (queue.isEmpty) {
+      throw StateError('No connectivity found for $wireName');
+    }
+    while (queue.isNotEmpty) {
+      final (owner, edge) = queue.removeFirst();
+      if (!seen.add((owner.id, edge.id))) {
+        continue;
+      }
+      for (final pin in drivers ? edge.sources : edge.targets) {
+        final node = nodeMap[pin.$1]!;
+        final port = node.elkPorts[pin.$2];
+        final path = '${node.occurrence.path()}/${port.hwMeta.name}';
+        void record(String label) {
+          results.putIfAbsent(port.id, () {
+            final names = <String>[];
+            for (LayoutNode? n = node; n != null && n != root; n = n.parent) {
+              names.add(n.name);
+            }
+            return (
+              id: port.id,
+              label: label,
+              ownerPath: names.reversed.toList()
+            );
+          });
+        }
+
+        final outward = identical(node, owner);
+        final next = outward ? owner.parent : node;
+        final opaque = node.hwMeta.extra?[ElkLayoutMetadata.isBlackBox] == true;
+        if (next == null ||
+            identical(next, root) ||
+            (!outward &&
+                (node.occurrence.isPrimitive ||
+                    (node.children.isEmpty &&
+                        (node.hiddenChildren?.isEmpty ?? true))))) {
+          record(!outward && opaque ? '$path (opaque boundary)' : path);
+          continue;
+        }
+        await load(next);
+        final index = indices.putIfAbsent(next.id, () {
+          final map = <(String, int), List<LayoutHyperedge>>{};
+          for (final h in next.hyperedges ?? const <LayoutHyperedge>[]) {
+            for (final p in drivers ? h.targets : h.sources) {
+              (map[p] ??= []).add(h);
+            }
+          }
+          return map;
+        });
+        final matches = index[pin];
+        if (matches == null) {
+          record(!outward && opaque
+              ? '$path (opaque boundary)'
+              : '$path (no further connection)');
+        } else {
+          for (final h in matches) {
+            queue.add((next, h));
+          }
+        }
+      }
+    }
+    return results.values.toList()..sort((a, b) => a.label.compareTo(b.label));
+  }
+
   /// Returns the directly connected port that drives [wireName] in [scopePath].
   ///
   /// A driver is either an output port of an instance in the scope or an input

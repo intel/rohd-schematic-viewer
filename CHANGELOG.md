@@ -1,5 +1,10 @@
-## Unreleased
+## 0.3.2
 
+- Align transparent fanin/fanout queries with the ROHD shell: cross module boundaries and stop at leaf ports. Callers that intentionally traversed simple gate logic can explicitly request `SchematicTraversalMode.primitivePassThrough` instead.
+
+- Add **Show Connected Ports** to inspect a wire's drivers or receivers. List visible ports or trace through hierarchy without moving the view, then click a port to reveal and zoom to it.
+- When expanding a block in an indexed netlist, attach its connectivity to every loaded instance of the same module without rebuilding the hierarchy or replaying expansion state.
+- Add [xchkr](doc/LAYOUT_CROSS_CHECK.md), an offline tool that checks two ELK layouts against the original graph for missing or misrouted wires and reports differences in node and port placement and size.
 - Use the Material localization delegate from `material_ui` instead of the deprecated `flutter_localizations` delegate.
 - Use `XFile` from `file_selector` for netlist loading and remove the direct dependency on `cross_file`. The embedded viewer API is unchanged.
 
