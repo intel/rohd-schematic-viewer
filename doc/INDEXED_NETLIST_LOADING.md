@@ -41,7 +41,9 @@ asynchronous step is pending; messages omit design names and JSON contents.
 
 The UI reports scanned MB against the total and shows hierarchy building as a
 separate phase. Opening file-backed blocks reports connectivity reads,
-decoding, and hierarchy rebuilding before layout. Text progress supplements
+decoding, and attaching connectivity before layout. The viewer updates each
+occurrence of the loaded definition without rebuilding unrelated instances
+or replaying expansion state. Text progress supplements
 the spinner during synchronous conversion. Frame waits, metadata reads, and
 byte reads time out with visible errors. Native read cancellation has a
 separate deadline so stalled cleanup cannot hide the original read timeout.
@@ -57,6 +59,9 @@ loader, start a fresh file load: hot reload cannot replace an already-pending
 asynchronous read.
 
 ## Testing and profiling
+
+Before comparing solver timings, verify that both results still route the
+expected wires. See [Cross-checking ELK layouts with xchkr](LAYOUT_CROSS_CHECK.md).
 
 The file-backed startup and on-demand expansion journeys run without a
 browser:

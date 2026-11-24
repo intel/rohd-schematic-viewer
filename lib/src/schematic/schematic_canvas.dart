@@ -4947,6 +4947,57 @@ class SchematicCanvasState extends State<SchematicCanvas> {
 
   /// Show a right-click context menu at `position` for selected items
   /// (wires, modules, or a mix).
+  Future<void> _showConnectedPorts(String wireId) async {
+    _ensureHoverLookups();
+    final selectedScope = _selectedWireScopePaths[wireId];
+    final scope = _selectedWireScopePaths.containsKey(wireId)
+        ? (_instanceLookup[selectedScope]?.hierarchyPath ?? selectedScope)
+        : _instanceLookup[_selectedEdgeScope]?.hierarchyPath;
+    final sources = <String>{};
+    final targets = <String>{};
+    for (final edge in widget.layout.edges) {
+      if (edge.wireId != wireId || edge.scopeHierarchyPath != scope) {
+        continue;
+      }
+      if (_portLookup.containsKey(edge.sourcePort)) {
+        sources.add(edge.sourcePort!);
+      }
+      if (_portLookup.containsKey(edge.targetPort)) {
+        targets.add(edge.targetPort!);
+      }
+    }
+
+    List<String> paths(Set<String> ids) => ids.map((id) {
+          final port = _portLookup[id]!;
+          final path = _instanceLookup[port.instanceId]?.hierarchyPath ??
+              port.instanceId;
+          return '$path/${port.name.isEmpty ? port.id : port.name}';
+        }).toList()
+          ..sort();
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+            'Connected Ports: ${scope == null ? wireId : '$scope/$wireId'}'),
+        scrollable: true,
+        content: SelectableText([
+          'Visible source ports (${sources.length})',
+          ...paths(sources),
+          '',
+          'Visible target ports (${targets.length})',
+          ...paths(targets),
+        ].join('\n')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showWireContextMenu(BuildContext context, Offset position) {
     final wirePaths = _collectSelectedSignalPaths();
     final wireLeafNames = _collectSelectedWireLeafNames();
@@ -5002,6 +5053,12 @@ class SchematicCanvasState extends State<SchematicCanvas> {
           globalPosition.dy,
         ),
         items: [
+          if (wireLeafNames.length == 1 && !hasNodes)
+            const PopupMenuItem<String>(
+              height: 32,
+              value: 'ports',
+              child: Text('Show Connected Ports'),
+            ),
           if (hasWires &&
               widget.onSendSignals != null &&
               widget.hasExternalSignalListeners)
@@ -5061,7 +5118,12 @@ class SchematicCanvasState extends State<SchematicCanvas> {
         ],
       ).then((value) async {
         final gotoFormat = gotoSourceFormatFromValue(value);
-        if (value == 'send' && widget.onSendSignals != null) {
+        if (!mounted) {
+          return;
+        }
+        if (value == 'ports') {
+          await _showConnectedPorts(wireLeafNames.single);
+        } else if (value == 'send' && widget.onSendSignals != null) {
           widget.onSendSignals!(_collectSendSignalPaths(wirePaths));
         } else if (gotoFormat != null && widget.onGoToSource != null) {
           widget.onGoToSource!(gotoFormat, [

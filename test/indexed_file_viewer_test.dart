@@ -259,6 +259,8 @@ void main() {
         state.adapter.schematic.nodeMap['0']!.partialChildIds, contains('0.0'));
     expect(state.adapter.schematic.nodeMap['0']!.hyperedges, isNull);
     final topSnapshot = state.adapter.schematic.expansionSnapshot();
+    final hierarchy = state.adapter.hierarchy;
+    final child = state.adapter.schematic.nodeMap['0.0'];
 
     await toggle(tester, state, '0.0');
     expect(state.errorMessage, isNull);
@@ -266,6 +268,8 @@ void main() {
     expect(state.hasConnections('Top'), isFalse);
     expect(state.hasConnections('Child'), isTrue);
     expect(state.hasConnections('Grandchild'), isFalse);
+    expect(state.adapter.hierarchy, same(hierarchy));
+    expect(state.adapter.schematic.nodeMap['0.0'], same(child));
     expect(state.adapter.schematic.nodeMap['0.0']!.hyperedges, isNotEmpty);
     expect(state.adapter.schematic.expansionSnapshot().partials.keys,
         containsAll(topSnapshot.partials.keys));
@@ -273,6 +277,24 @@ void main() {
     await toggle(tester, state, '0.0');
     await toggle(tester, state, '0.0');
     expect(source.reads, hasLength(2));
+  });
+
+  testWidgets('hydrating a shared definition connects every occurrence',
+      (tester) async {
+    final top = _module('Child', top: true);
+    final cells = top['cells'] as Map<String, dynamic>;
+    cells['second'] = cells['child'];
+    source = _Source(jsonEncode({
+      'modules': {'Top': top, 'Child': _module(r'$buf')},
+    }));
+    final state = await mount(tester);
+    await toggle(tester, state, '0.0');
+    final sibling = state.adapter.schematic.nodeMap['0.1']!;
+    expect(sibling.isExpanded, isFalse);
+    expect(sibling.hyperedges, isNotEmpty);
+    await toggle(tester, state, sibling.id);
+    expect(state.errorMessage, isNull);
+    expect(source.reads, hasLength(2)); // Initial scan + one definition.
   });
 
   testWidgets(
@@ -518,8 +540,7 @@ void main() {
         containsAllInOrder([
           'Loading connectivity (1/1)...',
           'Decoding connectivity (1/1)...',
-          'Preparing hierarchy with connectivity...',
-          'Building hierarchy with connectivity...',
+          'Connecting loaded modules...',
         ]));
     expect(state.busy, isFalse);
     expect(state.errorMessage, isNull);

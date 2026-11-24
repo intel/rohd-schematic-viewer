@@ -226,6 +226,11 @@ wire to view its signal name and hierarchy path. In an embedded or DevTools
 workflow that supplies current signal values, the tooltip also displays the
 value.
 
+Select one wire, then right-click and choose **Show Connected Ports** to list
+its visible source and target ports by instance path. Each port is counted
+once per role in the selected wire's scope. This inspects the current schematic
+without expanding blocks or moving the view.
+
 Use **Find Wire** with `Ctrl+F` or `Cmd+F` to search by name or hierarchy path:
 
 - search for a full path such as `FloatAdder/mantissa_sum`;
@@ -342,6 +347,9 @@ File/Line/Column source information.
 -->
 
 ## Development and Contributions
+
+To compare saved ELK layouts for wiring regressions and placement differences,
+see [Cross-checking ELK layouts with xchkr](doc/LAYOUT_CROSS_CHECK.md).
 
 This README is the user guide. Instructions for selecting dependency modes,
 running Flutter configurations, packaging the VS Code extension, and

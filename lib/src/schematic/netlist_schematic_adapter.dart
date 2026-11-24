@@ -142,6 +142,43 @@ class NetlistSchematicAdapter {
   /// Serialize the current visible schematic state as ELK JSON.
   String toJsGraph() => schematic.toJsGraph();
 
+  /// Attach full module connectivity to an indexed file's existing occurrences.
+  /// The index already contains the same cells, ports, widths and addresses.
+  void hydrateFileModules(Map<String, dynamic> updates) {
+    final modules = updates.map((k, v) => MapEntry(k, _YosysModule(k, v)));
+    final builder = _SchematicBuilder(
+      modules: modules,
+      externalHierarchy: null,
+      strictBlocksOnly: true,
+    );
+    final staged = <LayoutNode, LayoutNode>{};
+    for (final node in schematic.nodeMap.values) {
+      final module = modules[node.definition];
+      if (module == null || node.occurrence.isPrimitive) {
+        continue;
+      }
+      final children = {
+        for (final child in [...node.children, ...?node.hiddenChildren])
+          child.occurrence.name: child,
+      };
+      if (children.length != module.cells.length ||
+          module.cells.any((cell) => !children.containsKey(cell.name))) {
+        throw FormatException('Indexed hierarchy changed for ${module.name}');
+      }
+      final scope = LayoutNode(
+          id: node.id, occurrence: node.occurrence, elkPorts: node.elkPorts);
+      builder._addNetEdges(
+          container: scope, module: module, cellNodes: children);
+      staged[node] = scope;
+    }
+    for (final entry in staged.entries) {
+      entry.key
+        ..hyperedges = entry.value.hyperedges
+        ..slimConnectedPortIds = entry.value.slimConnectedPortIds
+        ..invalidatePortIndex();
+    }
+  }
+
   /// Toggle a node's expansion state.
   bool toggleNode(String nodeId) => schematic.toggleNode(nodeId);
 
@@ -338,6 +375,7 @@ class _SchematicBuilder {
   final bool strictBlocksOnly;
   final _SimpleHierarchyAdapter hierarchyAdapter = _SimpleHierarchyAdapter();
   final Map<String, LayoutNode> nodeMap = {};
+  final _portIndices = <LayoutNode, Map<(String, String?), int>>{};
 
   bool get hasExternalHierarchy => externalHierarchy != null;
 
@@ -599,9 +637,7 @@ class _SchematicBuilder {
       final direction = PortDirection.fromNetlist(entry.value);
       final displayName = _displayPortName(cell, portName);
       final side = _portSide(cell, portName, direction);
-      final width = cell.connections[portName]?.length ??
-          _asInt((cell.data['port_widths'] as Map?)?[portName]) ??
-          1;
+      final width = cell.portWidth(portName) ?? 1;
       final layoutIndex = _layoutPortIndex(
         cell: cell,
         portName: portName,
@@ -686,8 +722,7 @@ class _SchematicBuilder {
     }
 
     for (final port in module.ports) {
-      for (var bitIndex = 0; bitIndex < port.bits.length; bitIndex++) {
-        final bit = port.bits[bitIndex];
+      for (final bit in port.bits) {
         if (bit == null) {
           continue;
         }
@@ -823,20 +858,24 @@ class _SchematicBuilder {
   }
 
   int _findPort(LayoutNode node, String netlistPortName, {String? side}) {
-    var first = -1;
-    for (var i = 0; i < node.elkPorts.length; i++) {
-      final port = node.elkPorts[i];
-      final matches = port.hwMeta.name == netlistPortName ||
-          port.hwMeta.extra?['netlistPortName'] == netlistPortName;
-      if (!matches) {
-        continue;
+    final indices = _portIndices.putIfAbsent(node, () {
+      final map = <(String, String?), int>{};
+      for (var i = 0; i < node.elkPorts.length; i++) {
+        final port = node.elkPorts[i];
+        for (final name in [
+          port.hwMeta.name,
+          port.hwMeta.extra?['netlistPortName']
+        ].whereType<String>()) {
+          map
+            ..putIfAbsent((name, null), () => i)
+            ..putIfAbsent((name, port.side), () => i);
+        }
       }
-      if (side != null && port.side == side) {
-        return i;
-      }
-      first = first < 0 ? i : first;
-    }
-    return first;
+      return map;
+    });
+    return indices[(netlistPortName, side)] ??
+        indices[(netlistPortName, null)] ??
+        -1;
   }
 
   HwMeta _primitiveMeta(_YosysCell cell) {
@@ -900,7 +939,7 @@ class _SchematicBuilder {
 
   String _displayPortName(_YosysCell cell, String portName) {
     if (cell.type == 'ReplicationOp') {
-      final width = cell.connections[portName]?.length ?? 0;
+      final width = cell.portWidth(portName) ?? 0;
       final range = _rangeLabel(0, width);
       if (cell.portDirections[portName] != 'output') {
         return range;
@@ -909,7 +948,7 @@ class _SchematicBuilder {
       var inputWidth = 0;
       for (final entry in cell.portDirections.entries) {
         if (entry.value == 'input') {
-          inputWidth = cell.connections[entry.key]?.length ?? 0;
+          inputWidth = cell.portWidth(entry.key) ?? 0;
           break;
         }
       }
@@ -1101,7 +1140,8 @@ class _YosysModule {
         .toList();
   }
 
-  List<_YosysCell> get cells {
+  late final List<_YosysCell> cells = _readCells();
+  List<_YosysCell> _readCells() {
     final rawCells = data['cells'] as Map<String, dynamic>? ?? const {};
     return rawCells.entries
         .map((entry) => _YosysCell(entry.key, entry.value))
@@ -1141,7 +1181,12 @@ class _YosysCell {
   String get type => data['type']?.toString() ?? '';
   Map<String, dynamic> get parameters =>
       Map<String, dynamic>.from(data['parameters'] as Map? ?? const {});
-  Map<String, String> get portDirections {
+  int? portWidth(String name) =>
+      ((data['connections'] as Map?)?[name] as List?)?.length ??
+      _SchematicBuilder._asInt((data['port_widths'] as Map?)?[name]);
+
+  late final Map<String, String> portDirections = _readDirections();
+  Map<String, String> _readDirections() {
     final raw = data['port_directions'] as Map? ?? const {};
     return raw.map((key, value) => MapEntry(key.toString(), value.toString()));
   }
@@ -1169,7 +1214,7 @@ class _YosysNet {
   final String name;
   final Map<String, dynamic> data;
 
-  List<int?> get bits => _bits(data['bits']);
+  late final List<int?> bits = _bits(data['bits']);
   Map<String, dynamic>? get logicType => data['logic_type'] == null
       ? null
       : Map<String, dynamic>.from(data['logic_type'] as Map);
