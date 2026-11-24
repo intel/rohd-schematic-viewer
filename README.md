@@ -227,9 +227,15 @@ workflow that supplies current signal values, the tooltip also displays the
 value.
 
 Select one wire, then right-click and choose **Show Connected Ports** to list
-its visible source and target ports by instance path. Each port is counted
-once per role in the selected wire's scope. This inspects the current schematic
-without expanding blocks or moving the view.
+its **Drivers** or **Receivers** by instance path. **Visible** lists only
+connections drawn in the selected scope. **Trace to leaves** follows the
+signal across module ports, including every fanout branch. It loads module
+connectivity on demand without opening blocks or moving the view. The trace
+stops at primitive ports, design ports, or opaque boundaries; it does not
+follow a signal through a gate's logic. This is the hierarchy-transparent
+policy of shell `fanin` (drivers) and `fanout` (receivers) with `transparent`.
+It is a connectivity query, not Shift-click expansion. Click a port in either list to reveal
+its instance if needed and zoom directly to the port.
 
 Use **Find Wire** with `Ctrl+F` or `Cmd+F` to search by name or hierarchy path:
 

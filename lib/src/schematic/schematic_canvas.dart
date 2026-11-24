@@ -2729,6 +2729,10 @@ class SchematicCanvas extends StatefulWidget {
   final String? Function(String wireName, String scopePath)?
       directDriverSignalPath;
 
+  /// Read-only trace across hierarchy, optionally loading module connectivity.
+  final Future<List<ConnectedPort>> Function(String scopeId, String wire,
+      {required bool drivers, required bool Function() active})? traceWirePorts;
+
   /// Whether external widgets (e.g. waveform viewer, signal table) are
   /// listening for signals sent via `onSendSignals`.
   ///
@@ -2780,6 +2784,7 @@ class SchematicCanvas extends StatefulWidget {
     this.focusPortId,
     this.onSendSignals,
     this.directDriverSignalPath,
+    this.traceWirePorts,
     this.hasExternalSignalListeners = true,
     this.onGoToSource,
     this.availableSourceFormats,
@@ -2809,6 +2814,7 @@ class SchematicCanvas extends StatefulWidget {
             Future<SchematicLayoutResult?> Function(
                 String)?>.has('onNodeToggle', onNodeToggle),
       )
+      ..add(ObjectFlagProperty.has('traceWirePorts', traceWirePorts))
       ..add(StringProperty('pendingToggleNodeId', pendingToggleNodeId))
       ..add(StringProperty('recentlyToggledNodeId', recentlyToggledNodeId))
       ..add(DiagnosticsProperty<bool>('isDimmed', isDimmed))
@@ -4526,7 +4532,8 @@ class SchematicCanvasState extends State<SchematicCanvas> {
   /// position), the transform is adjusted so the port remains exactly
   /// there.  If the anchor is `null` (e.g. the port was not visible before),
   /// the port is centred in the viewport instead.
-  void _focusOnPort(String portId, {Offset? viewportAnchor}) {
+  void _focusOnPort(String portId,
+      {Offset? viewportAnchor, double? minimumZoom}) {
     if (!mounted) {
       return;
     }
@@ -4562,7 +4569,7 @@ class SchematicCanvasState extends State<SchematicCanvas> {
     final portCY = target.y + target.height / 2;
 
     // Keep the current zoom level.
-    final scale = _scale;
+    final scale = minimumZoom == null ? _scale : math.max(minimumZoom, _scale);
 
     // Use the pre-expansion viewport position if available; otherwise
     // fall back to viewport centre.
@@ -4967,35 +4974,140 @@ class SchematicCanvasState extends State<SchematicCanvas> {
       }
     }
 
-    List<String> paths(Set<String> ids) => ids.map((id) {
+    List<ConnectedPort> paths(Set<String> ids) => ids.map((id) {
           final port = _portLookup[id]!;
           final path = _instanceLookup[port.instanceId]?.hierarchyPath ??
               port.instanceId;
-          return '$path/${port.name.isEmpty ? port.id : port.name}';
+          return (
+            id: id,
+            label: '$path/${port.name.isEmpty ? port.id : port.name}',
+            ownerPath: const <String>[]
+          );
         }).toList()
-          ..sort();
+          ..sort((a, b) => a.label.compareTo(b.label));
 
-    await showDialog<void>(
+    var drivers = true;
+    var deep = false;
+    var request = 0;
+    Future<List<ConnectedPort>>? trace;
+    final tracePorts = widget.traceWirePorts;
+    final scopeId = _hierLookup[scope]?.id;
+    final visibleDrivers = paths(sources);
+    final visibleReceivers = paths(targets);
+    final selected = await showDialog<ConnectedPort>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-            'Connected Ports: ${scope == null ? wireId : '$scope/$wireId'}'),
-        scrollable: true,
-        content: SelectableText([
-          'Visible source ports (${sources.length})',
-          ...paths(sources),
-          '',
-          'Visible target ports (${targets.length})',
-          ...paths(targets),
-        ].join('\n')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
+      builder: (context) => StatefulBuilder(builder: (context, update) {
+        void change({required bool upstream, required bool toLeaves}) {
+          final ticket = ++request;
+          update(() {
+            drivers = upstream;
+            deep = toLeaves;
+            trace = deep
+                ? tracePorts!(scopeId!, wireId,
+                    drivers: drivers,
+                    active: () =>
+                        context.mounted &&
+                        (ModalRoute.of(context)?.isCurrent ?? false) &&
+                        ticket == request)
+                : null;
+          });
+        }
+
+        return AlertDialog(
+          title: Text(
+              'Connected Ports: ${scope == null ? wireId : '$scope/$wireId'}'),
+          scrollable: true,
+          content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(spacing: 6, children: [
+                  ChoiceChip(
+                      label: const Text('Drivers'),
+                      selected: drivers,
+                      onSelected: (_) =>
+                          change(upstream: true, toLeaves: deep)),
+                  ChoiceChip(
+                      label: const Text('Receivers'),
+                      selected: !drivers,
+                      onSelected: (_) =>
+                          change(upstream: false, toLeaves: deep)),
+                ]),
+                Wrap(spacing: 6, children: [
+                  ChoiceChip(
+                      label: const Text('Visible'),
+                      selected: !deep,
+                      onSelected: (_) =>
+                          change(upstream: drivers, toLeaves: false)),
+                  ChoiceChip(
+                      label: const Text('Trace to leaves'),
+                      selected: deep,
+                      onSelected: tracePorts == null || scopeId == null
+                          ? null
+                          : (_) => change(upstream: drivers, toLeaves: true)),
+                ]),
+                FutureBuilder<List<ConnectedPort>>(
+                    future: trace,
+                    builder: (context, snapshot) {
+                      if (deep &&
+                          snapshot.connectionState != ConnectionState.done) {
+                        return const Text('Tracing connections...');
+                      }
+                      if (deep && snapshot.hasError) {
+                        return Text('Trace failed: ${snapshot.error}');
+                      }
+                      final rows = deep
+                          ? snapshot.requireData
+                          : drivers
+                              ? visibleDrivers
+                              : visibleReceivers;
+                      return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('${drivers ? 'Drivers' : 'Receivers'} '
+                                '(${rows.length})'),
+                            for (final port in rows)
+                              TextButton(
+                                  onPressed: () => Navigator.pop(context, port),
+                                  child: Text(port.label)),
+                          ]);
+                    }),
+              ]),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      }),
     );
+    request++;
+    if (!mounted || selected == null) {
+      return;
+    }
+    _ensureHoverLookups();
+    if (!_portLookup.containsKey(selected.id) &&
+        selected.ownerPath.isNotEmpty &&
+        widget.onExpandPath != null) {
+      await widget.onExpandPath!(selected.ownerPath);
+      if (!mounted) {
+        return;
+      }
+      // Let the expansion's normal post-frame auto-fit finish before centring.
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) {
+        return;
+      }
+      _ensureHoverLookups();
+    }
+    if (!_portLookup.containsKey(selected.id)) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(content: Text('Could not reveal ${selected.label}')),
+      );
+      return;
+    }
+    _focusOnPort(selected.id, minimumZoom: 1.5);
   }
 
   void _showWireContextMenu(BuildContext context, Offset position) {

@@ -36,8 +36,11 @@ enum SchematicTraversalMode {
   /// Return only endpoints directly connected by the queried signal.
   opaque,
 
-  /// Traverse through transparent primitive gates.
+  /// Follow module ports to leaf ports, without traversing primitive logic.
   transparent,
+
+  /// Explicit legacy traversal through selected primitive operators.
+  primitivePassThrough,
 }
 
 /// An immutable schematic endpoint reached during connectivity traversal.
@@ -146,10 +149,11 @@ class NetlistSchematicConnectivity {
         }
       }
     }
-    if (mode == SchematicTraversalMode.transparent) {
+    if (mode != SchematicTraversalMode.opaque) {
       return _transparentEndpoints(
         initialEndpoints,
         traceUpstream: includeSources,
+        throughPrimitives: mode == SchematicTraversalMode.primitivePassThrough,
       );
     }
     return _describeEndpoints(initialEndpoints);
@@ -158,6 +162,7 @@ class NetlistSchematicConnectivity {
   List<SchematicPortOccurrence> _transparentEndpoints(
     List<_Endpoint> initialEndpoints, {
     required bool traceUpstream,
+    required bool throughPrimitives,
   }) {
     final schematic = _adapter.schematic;
     final queue = ListQueue<_Endpoint>.from(initialEndpoints);
@@ -175,6 +180,23 @@ class NetlistSchematicConnectivity {
       if (node == null ||
           endpoint.$2 < 0 ||
           endpoint.$2 >= node.elkPorts.length) {
+        continue;
+      }
+      if (!throughPrimitives) {
+        if (node.children.isEmpty && (node.hiddenChildren?.isEmpty ?? true)) {
+          terminalEndpoints.add(endpoint);
+          continue;
+        }
+        final matches = hyperedgesByExit[endpoint] ?? const <LayoutHyperedge>[];
+        final next = matches
+            .expand((h) => traceUpstream ? h.sources : h.targets)
+            .where((p) => p != endpoint)
+            .toSet();
+        if (next.isEmpty) {
+          terminalEndpoints.add(endpoint);
+        } else {
+          queue.addAll(next);
+        }
         continue;
       }
       if (!isTransparentTraversalNode(node)) {
