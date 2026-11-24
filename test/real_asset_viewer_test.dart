@@ -866,6 +866,7 @@ void main() {
     );
     await tester.pump();
     expect(find.text('Copy 1 Name'), findsOneWidget);
+    expect(find.text('Show Connected Ports'), findsNothing);
     Navigator.of(tester.element(find.byType(SchematicCanvas))).pop('copy_name');
     await tester.pump();
 
@@ -1763,6 +1764,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('Collapse 2 Signals'), findsOneWidget);
+    expect(find.text('Show Connected Ports'), findsNothing);
 
     final graphBeforeCollapse = engine.elkGraphs.last;
     Navigator.of(tester.element(find.byType(SchematicCanvas))).pop('collapse');
@@ -1842,6 +1844,31 @@ void main() {
     await tester.pump();
 
     expect(sentSignals, ['${edge.scopeHierarchyPath}/${edge.wireId}']);
+
+    await tester.pumpAndSettle();
+    final layoutCount = engine.layouts.length;
+    await tester.tapAt(
+      screenPosition,
+      buttons: kSecondaryMouseButton,
+      kind: PointerDeviceKind.mouse,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Show Connected Ports'));
+    await tester.pumpAndSettle();
+    expect(
+        find.text('Connected Ports: ${sentSignals!.single}'), findsOneWidget);
+    final layout = engine.layouts.last;
+    for (final id in [edge.sourcePort!, edge.targetPort!]) {
+      final port = layout.ports.singleWhere((port) => port.id == id);
+      final owner =
+          layout.instances.singleWhere((i) => i.id == port.instanceId);
+      final text = tester.widget<SelectableText>(find.byType(SelectableText));
+      expect(text.data!.split('\n'),
+          contains('${owner.hierarchyPath}/${port.name}'));
+    }
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
+    expect(engine.layouts, hasLength(layoutCount));
   });
 
   testWidgets(
